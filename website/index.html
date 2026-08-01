@@ -26,6 +26,22 @@ body { margin: 0; background: #f2f0eb; color: #16150f; font-family: 'Archivo', H
 a { color: #16150f; }
 a:hover { color: oklch(0.6 0.19 35); }
 ::selection { background: oklch(0.6 0.19 35); color: #f2f0eb; }
+/* chart axes. gridlines are drawn inside the SVG, tick labels are HTML so they never
+   stretch with preserveAspectRatio="none". the transparent borders shrink the label
+   track's containing block to exactly the SVG content box, past its 2px frame. */
+.ax { display: grid; grid-template-columns: var(--yll, 15px) var(--yw, 46px) minmax(0, 1fr); grid-template-rows: auto 17px auto; }
+/* writing-mode rather than a rotate on a child: interpolated text gets wrapped in its
+   own span, and a descendant rotate would then be applied twice */
+.ax-yl { grid-area: 1 / 1; display: flex; align-items: center; justify-content: center; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-family: 'Space Grotesk', monospace; font-size: 11px; color: #55524a; }
+.ax-yt { grid-area: 1 / 2; position: relative; border-top: 2px solid transparent; border-bottom: 2px solid transparent; }
+.ax-yt div { position: absolute; right: 7px; transform: translateY(-50%); font-family: 'Space Grotesk', monospace; font-size: 10.5px; line-height: 1; color: #55524a; white-space: nowrap; }
+.ax-pl { grid-area: 1 / 3; position: relative; }
+.ax-xt { grid-area: 2 / 3; position: relative; border-left: 2px solid transparent; border-right: 2px solid transparent; }
+.ax-xt div { position: absolute; top: 4px; transform: translateX(-50%); font-family: 'Space Grotesk', monospace; font-size: 10.5px; line-height: 1; color: #55524a; white-space: nowrap; }
+.ax-xl { grid-area: 3 / 3; text-align: center; font-family: 'Space Grotesk', monospace; font-size: 11px; color: #55524a; padding-top: 4px; }
+/* the same tick row under a plain HTML bar track */
+.ax-h { position: relative; height: 17px; margin-top: 2px; }
+.ax-h div { position: absolute; top: 4px; transform: translateX(-50%); font-family: 'Space Grotesk', monospace; font-size: 10.5px; line-height: 1; color: #55524a; white-space: nowrap; }
 
 /* Mobile pass: collapse the desktop multi-column grids to one column, and rein in
    the fixed paddings/font-sizes that were sized for a wide viewport. The .bbs-table-grid
@@ -229,15 +245,22 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
           <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase">The two fitted densities over all 6,287 days · live</div>
           <div style="display: flex; gap: 8px"><sc-for list="{{ c2Scales }}" as="sb" hint-placeholder-count="2"><button onClick="{{ sb.pick }}" style="font-family: 'Space Grotesk', monospace; font-size: 13px; font-weight: 700; padding: 6px 14px; border: 2px solid #16150f; cursor: pointer; background: {{ sb.bg }}; color: {{ sb.fg }}" style-hover="opacity: 0.8">{{ sb.label }}</button></sc-for></div>
         </div>
-        <div style="position: relative; cursor: crosshair" onMouseMove="{{ c2Move }}" onMouseLeave="{{ c2Leave }}">
-          <svg viewBox="0 0 860 300" preserveAspectRatio="none" style="display: block; width: 100%; height: 300px; background: #f2f0eb; border: 2px solid #16150f">
-            <path d="{{ c2Hist }}" fill="#e2dfd5" stroke="none"></path>
-            <path d="{{ c2Gauss }}" fill="none" stroke="steelblue" stroke-width="2.5" stroke-dasharray="6 4"></path>
-            <path d="{{ c2T }}" fill="none" stroke="crimson" stroke-width="3"></path>
-          </svg>
-          <sc-if value="{{ c2HoverOn }}" hint-placeholder-val="{{ false }}">
-            <div style="position: absolute; top: 0; bottom: 0; left: {{ c2CrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
-          </sc-if>
+        <div class="ax">
+          <div class="ax-yl"><span>{{ c2YL }}</span></div>
+          <div class="ax-yt"><sc-for list="{{ c2YT }}" as="yt" hint-placeholder-count="7"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+          <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c2Move }}" onMouseLeave="{{ c2Leave }}">
+            <svg viewBox="0 0 860 300" preserveAspectRatio="none" style="display: block; width: 100%; height: 300px; background: #f2f0eb; border: 2px solid #16150f">
+              <path d="{{ c2Grid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+              <path d="{{ c2Hist }}" fill="#e2dfd5" stroke="none"></path>
+              <path d="{{ c2Gauss }}" fill="none" stroke="steelblue" stroke-width="2.5" stroke-dasharray="6 4"></path>
+              <path d="{{ c2T }}" fill="none" stroke="crimson" stroke-width="3"></path>
+            </svg>
+            <sc-if value="{{ c2HoverOn }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; top: 0; bottom: 0; left: {{ c2CrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
+            </sc-if>
+          </div>
+          <div class="ax-xt"><sc-for list="{{ c2XT }}" as="xt" hint-placeholder-count="7"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+          <div class="ax-xl">Daily log-return</div>
         </div>
         <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 12px; min-height: 20px; line-height: 1.5">{{ c2Read }}</div>
         <div style="display: flex; gap: 24px; margin-top: 8px; font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; flex-wrap: wrap">
@@ -254,14 +277,21 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
               </sc-for>
             </div>
           </div>
-          <div style="position: relative; cursor: crosshair" onMouseMove="{{ c2qMove }}" onMouseLeave="{{ c2qLeave }}">
-            <svg viewBox="0 0 460 460" style="display: block; width: 100%; height: auto; background: #f2f0eb; border: 2px solid #16150f">
-              <path d="{{ c2qDiag }}" stroke="#8a8577" stroke-width="2" stroke-dasharray="6 4" fill="none"></path>
-              <path d="{{ c2qPts }}" fill="{{ c2qCol }}" stroke="none"></path>
-            </svg>
-            <sc-if value="{{ c2qHovOn }}" hint-placeholder-val="{{ false }}">
-              <div style="position: absolute; left: {{ c2qHx }}; top: {{ c2qHy }}; width: 12px; height: 12px; margin: -6px 0 0 -6px; border: 3px solid oklch(0.6 0.19 35); pointer-events: none"></div>
-            </sc-if>
+          <div class="ax" style="--yll: 14px; --yw: 38px">
+            <div class="ax-yl"><span>Sample quantiles</span></div>
+            <div class="ax-yt"><sc-for list="{{ c2qYT }}" as="yt" hint-placeholder-count="5"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+            <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c2qMove }}" onMouseLeave="{{ c2qLeave }}">
+              <svg viewBox="0 0 460 460" style="display: block; width: 100%; height: auto; background: #f2f0eb; border: 2px solid #16150f">
+                <path d="{{ c2qGrid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+                <path d="{{ c2qDiag }}" stroke="#8a8577" stroke-width="2" stroke-dasharray="6 4" fill="none"></path>
+                <path d="{{ c2qPts }}" fill="{{ c2qCol }}" stroke="none"></path>
+              </svg>
+              <sc-if value="{{ c2qHovOn }}" hint-placeholder-val="{{ false }}">
+                <div style="position: absolute; left: {{ c2qHx }}; top: {{ c2qHy }}; width: 12px; height: 12px; margin: -6px 0 0 -6px; border: 3px solid oklch(0.6 0.19 35); pointer-events: none"></div>
+              </sc-if>
+            </div>
+            <div class="ax-xt"><sc-for list="{{ c2qXT }}" as="xt" hint-placeholder-count="5"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+            <div class="ax-xl">Theoretical quantiles</div>
           </div>
           <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; margin-top: 12px; min-height: 36px; line-height: 1.5">{{ c2qRead }}</div>
         </div>
@@ -328,18 +358,25 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
             <div style="display: flex; gap: 8px"><sc-for list="{{ c3Scales }}" as="sb" hint-placeholder-count="2"><button onClick="{{ sb.pick }}" style="font-family: 'Space Grotesk', monospace; font-size: 13px; font-weight: 700; padding: 6px 14px; border: 2px solid #16150f; cursor: pointer; background: {{ sb.bg }}; color: {{ sb.fg }}" style-hover="opacity: 0.8">{{ sb.label }}</button></sc-for></div>
           </div>
         </div>
-        <div style="position: relative; cursor: crosshair" onMouseMove="{{ c3Move }}" onMouseLeave="{{ c3Leave }}">
-          <svg viewBox="0 0 860 300" preserveAspectRatio="none" style="display: block; width: 100%; height: 300px; background: #f2f0eb; border: 2px solid #16150f">
-            <path d="{{ c3Hist }}" fill="#e2dfd5" stroke="none"></path>
-            <path d="{{ c3P_gaussian }}" fill="none" stroke="steelblue" stroke-width="2.2" stroke-dasharray="6 4"></path>
-            <path d="{{ c3P_laplace }}" fill="none" stroke="purple" stroke-width="2.2"></path>
-            <path d="{{ c3P_vg }}" fill="none" stroke="forestgreen" stroke-width="2.2"></path>
-            <path d="{{ c3P_t }}" fill="none" stroke="crimson" stroke-width="2.4"></path>
-            <path d="{{ c3P_nig }}" fill="none" stroke="darkorange" stroke-width="3"></path>
-          </svg>
-          <sc-if value="{{ c3HoverOn }}" hint-placeholder-val="{{ false }}">
-            <div style="position: absolute; top: 0; bottom: 0; left: {{ c3CrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
-          </sc-if>
+        <div class="ax">
+          <div class="ax-yl"><span>{{ c3YL }}</span></div>
+          <div class="ax-yt"><sc-for list="{{ c3YT }}" as="yt" hint-placeholder-count="7"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+          <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c3Move }}" onMouseLeave="{{ c3Leave }}">
+            <svg viewBox="0 0 860 300" preserveAspectRatio="none" style="display: block; width: 100%; height: 300px; background: #f2f0eb; border: 2px solid #16150f">
+              <path d="{{ c3Grid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+              <path d="{{ c3Hist }}" fill="#e2dfd5" stroke="none"></path>
+              <path d="{{ c3P_gaussian }}" fill="none" stroke="steelblue" stroke-width="2.2" stroke-dasharray="6 4"></path>
+              <path d="{{ c3P_laplace }}" fill="none" stroke="purple" stroke-width="2.2"></path>
+              <path d="{{ c3P_vg }}" fill="none" stroke="forestgreen" stroke-width="2.2"></path>
+              <path d="{{ c3P_t }}" fill="none" stroke="crimson" stroke-width="2.4"></path>
+              <path d="{{ c3P_nig }}" fill="none" stroke="darkorange" stroke-width="3"></path>
+            </svg>
+            <sc-if value="{{ c3HoverOn }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; top: 0; bottom: 0; left: {{ c3CrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
+            </sc-if>
+          </div>
+          <div class="ax-xt"><sc-for list="{{ c3XT }}" as="xt" hint-placeholder-count="7"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+          <div class="ax-xl">Daily log-return</div>
         </div>
         <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 12px; min-height: 20px; line-height: 1.5">{{ c3Read }}</div>
       </div>
@@ -351,14 +388,21 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
               <button onClick="{{ qb.pick }}" style="font-family: 'Space Grotesk', monospace; font-size: 12px; font-weight: 700; padding: 5px 10px; border: 2px solid #16150f; cursor: pointer; background: {{ qb.bg }}; color: {{ qb.fg }}" style-hover="opacity: 0.8">{{ qb.label }}</button>
             </sc-for>
           </div>
-          <div style="position: relative; cursor: crosshair" onMouseMove="{{ c3qMove }}" onMouseLeave="{{ c3qLeave }}">
-            <svg viewBox="0 0 460 460" style="display: block; width: 100%; height: auto; background: #f2f0eb; border: 2px solid #16150f">
-              <path d="{{ c3qDiag }}" stroke="#8a8577" stroke-width="2" stroke-dasharray="6 4" fill="none"></path>
-              <path d="{{ c3qPts }}" fill="{{ c3qCol }}" stroke="none"></path>
-            </svg>
-            <sc-if value="{{ c3qHovOn }}" hint-placeholder-val="{{ false }}">
-              <div style="position: absolute; left: {{ c3qHx }}; top: {{ c3qHy }}; width: 12px; height: 12px; margin: -6px 0 0 -6px; border: 3px solid oklch(0.6 0.19 35); pointer-events: none"></div>
-            </sc-if>
+          <div class="ax" style="--yll: 14px; --yw: 38px">
+            <div class="ax-yl"><span>Sample quantiles</span></div>
+            <div class="ax-yt"><sc-for list="{{ c3qYT }}" as="yt" hint-placeholder-count="5"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+            <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c3qMove }}" onMouseLeave="{{ c3qLeave }}">
+              <svg viewBox="0 0 460 460" style="display: block; width: 100%; height: auto; background: #f2f0eb; border: 2px solid #16150f">
+                <path d="{{ c3qGrid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+                <path d="{{ c3qDiag }}" stroke="#8a8577" stroke-width="2" stroke-dasharray="6 4" fill="none"></path>
+                <path d="{{ c3qPts }}" fill="{{ c3qCol }}" stroke="none"></path>
+              </svg>
+              <sc-if value="{{ c3qHovOn }}" hint-placeholder-val="{{ false }}">
+                <div style="position: absolute; left: {{ c3qHx }}; top: {{ c3qHy }}; width: 12px; height: 12px; margin: -6px 0 0 -6px; border: 3px solid oklch(0.6 0.19 35); pointer-events: none"></div>
+              </sc-if>
+            </div>
+            <div class="ax-xt"><sc-for list="{{ c3qXT }}" as="xt" hint-placeholder-count="5"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+            <div class="ax-xl">Theoretical quantiles</div>
           </div>
           <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; margin-top: 12px; min-height: 36px; line-height: 1.5">{{ c3qRead }}</div>
         </div>
@@ -393,23 +437,30 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
             </sc-for>
           </div>
         </div>
-        <div style="position: relative; cursor: crosshair" onMouseMove="{{ c3yMove }}" onMouseLeave="{{ c3yLeave }}">
-          <svg viewBox="0 0 860 230" preserveAspectRatio="none" style="display: block; width: 100%; height: 230px; background: #f2f0eb; border: 2px solid #16150f">
-            <rect x="{{ c3yC1x }}" y="0" width="{{ c3yC1w }}" height="230" fill="#f4b40038"></rect>
-            <rect x="{{ c3yC2x }}" y="0" width="{{ c3yC2w }}" height="230" fill="#e2504e29"></rect>
-            <rect x="{{ c3yC3x }}" y="0" width="{{ c3yC3w }}" height="230" fill="#1f9ec429"></rect>
-            <rect x="{{ c3yC4x }}" y="0" width="{{ c3yC4w }}" height="230" fill="#3fa34d29"></rect>
-            <path d="{{ c3yRef }}" stroke="#8a8577" stroke-width="2" stroke-dasharray="6 4" fill="none"></path>
-            <path d="{{ c3yWhisk }}" stroke="#55524a" stroke-width="1.6" fill="none"></path>
-            <path d="{{ c3yLine }}" stroke="#16150f" stroke-width="2" fill="none"></path>
-            <path d="{{ c3yPts }}" fill="oklch(0.6 0.19 35)" stroke="none"></path>
-          </svg>
-          <sc-if value="{{ c3yHovOn }}" hint-placeholder-val="{{ false }}">
-            <div style="position: absolute; top: 0; bottom: 0; left: {{ c3yHx }}; width: 2px; background: #16150f; pointer-events: none"></div>
-          </sc-if>
+        <div class="ax">
+          <div class="ax-yl"><span>{{ c3yYL }}</span></div>
+          <div class="ax-yt"><sc-for list="{{ c3yYT }}" as="yt" hint-placeholder-count="5"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+          <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c3yMove }}" onMouseLeave="{{ c3yLeave }}">
+            <svg viewBox="0 0 860 230" preserveAspectRatio="none" style="display: block; width: 100%; height: 230px; background: #f2f0eb; border: 2px solid #16150f">
+              <rect x="{{ c3yC1x }}" y="0" width="{{ c3yC1w }}" height="230" fill="#f4b40038"></rect>
+              <rect x="{{ c3yC2x }}" y="0" width="{{ c3yC2w }}" height="230" fill="#e2504e29"></rect>
+              <rect x="{{ c3yC3x }}" y="0" width="{{ c3yC3w }}" height="230" fill="#1f9ec429"></rect>
+              <rect x="{{ c3yC4x }}" y="0" width="{{ c3yC4w }}" height="230" fill="#3fa34d29"></rect>
+              <path d="{{ c3yGrid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+              <path d="{{ c3yRef }}" stroke="#8a8577" stroke-width="2" stroke-dasharray="6 4" fill="none"></path>
+              <path d="{{ c3yWhisk }}" stroke="#55524a" stroke-width="1.6" fill="none"></path>
+              <path d="{{ c3yLine }}" stroke="#16150f" stroke-width="2" fill="none"></path>
+              <path d="{{ c3yPts }}" fill="oklch(0.6 0.19 35)" stroke="none"></path>
+            </svg>
+            <sc-if value="{{ c3yHovOn }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; top: 0; bottom: 0; left: {{ c3yHx }}; width: 2px; background: #16150f; pointer-events: none"></div>
+            </sc-if>
+          </div>
+          <div class="ax-xt"><sc-for list="{{ c3yXT }}" as="xt" hint-placeholder-count="5"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+          <div class="ax-xl">Year of the refit</div>
         </div>
         <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 12px; min-height: 20px; line-height: 1.5">{{ c3yRead }}</div>
-        <div style="display: flex; justify-content: space-between; font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px"><span>2000</span><span>2024</span></div>
+        
       </div>
       <button onClick="{{ toggleW3 }}" style="width: 100%; text-align: left; font-family: 'Space Grotesk', monospace; font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 16px 20px; border: 2px solid #16150f; background: {{ w3BtnBg }}; color: {{ w3BtnFg }}; cursor: pointer; display: flex; justify-content: space-between" style-hover="background: oklch(0.6 0.19 35); color: #f2f0eb"><span>Explore the Week 3 results · compare the five models</span><span>{{ w3Chevron }}</span></button>
       <sc-if value="{{ openW3 }}" hint-placeholder-val="{{ false }}">
@@ -450,6 +501,8 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
             </div>
           </sc-for>
         </div>
+        <div class="ax-h"><sc-for list="{{ c3fTicks }}" as="ft" hint-placeholder-count="6"><div style="left: {{ ft.p }}">{{ ft.l }}</div></sc-for></div>
+        <div style="font-family: 'Space Grotesk', monospace; font-size: 11px; color: #55524a; text-align: center; margin-top: 2px">Standardised coefficient (σ of forward vol per σ of factor)</div>
         <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 14px; padding: 12px 14px; border: 2px solid #16150f; background: #f2f0eb; line-height: 1.6">{{ c3fNote }}</div>
         <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 8px">forward 21-day realised vol on seven factors · n = 6,207 · R² 0.553 against a volatility-only baseline of 0.441 · orange rule at zero · greyed factors have intervals spanning zero</div>
       </div>
@@ -457,31 +510,45 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
         <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px">Could you see it coming? Actual against fitted, day by day · live</div>
         <div style="display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start">
           <div>
-            <div style="position: relative; cursor: crosshair" onMouseMove="{{ c3LfMove }}" onMouseLeave="{{ c3LfLeave }}">
-              <svg viewBox="0 0 860 260" preserveAspectRatio="none" style="display: block; width: 100%; height: 260px; background: #f2f0eb; border: 2px solid #16150f">
-                <rect x="{{ c3LfC1x }}" y="0" width="{{ c3LfC1w }}" height="260" fill="#f4b40038"></rect>
-                <rect x="{{ c3LfC2x }}" y="0" width="{{ c3LfC2w }}" height="260" fill="#e2504e29"></rect>
-                <rect x="{{ c3LfC3x }}" y="0" width="{{ c3LfC3w }}" height="260" fill="#1f9ec429"></rect>
-                <rect x="{{ c3LfC4x }}" y="0" width="{{ c3LfC4w }}" height="260" fill="#3fa34d29"></rect>
-                <path d="{{ c3LfA }}" fill="none" stroke="#16150f" stroke-width="1"></path>
-                <path d="{{ c3LfF }}" fill="none" stroke="oklch(0.6 0.19 35)" stroke-width="1.7"></path>
-              </svg>
-              <sc-if value="{{ c3LfHovOn }}" hint-placeholder-val="{{ false }}">
-                <div style="position: absolute; top: 0; bottom: 0; left: {{ c3LfCrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
-              </sc-if>
+            <div class="ax">
+              <div class="ax-yl"><span>Ann. vol (%)</span></div>
+              <div class="ax-yt"><sc-for list="{{ c3LfYT }}" as="yt" hint-placeholder-count="5"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+              <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c3LfMove }}" onMouseLeave="{{ c3LfLeave }}">
+                <svg viewBox="0 0 860 260" preserveAspectRatio="none" style="display: block; width: 100%; height: 260px; background: #f2f0eb; border: 2px solid #16150f">
+                  <rect x="{{ c3LfC1x }}" y="0" width="{{ c3LfC1w }}" height="260" fill="#f4b40038"></rect>
+                  <rect x="{{ c3LfC2x }}" y="0" width="{{ c3LfC2w }}" height="260" fill="#e2504e29"></rect>
+                  <rect x="{{ c3LfC3x }}" y="0" width="{{ c3LfC3w }}" height="260" fill="#1f9ec429"></rect>
+                  <rect x="{{ c3LfC4x }}" y="0" width="{{ c3LfC4w }}" height="260" fill="#3fa34d29"></rect>
+                  <path d="{{ c3LfGrid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+                  <path d="{{ c3LfA }}" fill="none" stroke="#16150f" stroke-width="1"></path>
+                  <path d="{{ c3LfF }}" fill="none" stroke="oklch(0.6 0.19 35)" stroke-width="1.7"></path>
+                </svg>
+                <sc-if value="{{ c3LfHovOn }}" hint-placeholder-val="{{ false }}">
+                  <div style="position: absolute; top: 0; bottom: 0; left: {{ c3LfCrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
+                </sc-if>
+              </div>
+              <div class="ax-xt"><sc-for list="{{ c3LfXT }}" as="xt" hint-placeholder-count="6"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+              <div class="ax-xl">Date</div>
             </div>
             <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 12px; min-height: 20px; line-height: 1.5">{{ c3LfRead }}</div>
-            <div style="display: flex; justify-content: space-between; font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px"><span>2000</span><span>ink: realised forward 21-day vol · orange: fitted from day-t information only</span><span>2024</span></div>
+            <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px; text-align: center">ink: realised forward 21-day vol · orange: fitted from day-t information only</div>
           </div>
           <div>
-            <div style="position: relative; cursor: crosshair" onMouseMove="{{ c3LfSMove }}" onMouseLeave="{{ c3LfSLeave }}">
-              <svg viewBox="0 0 300 300" style="display: block; width: 100%; height: auto; background: #f2f0eb; border: 2px solid #16150f">
-                <path d="{{ c3LfDiag }}" stroke="#8a8577" stroke-width="1.4" stroke-dasharray="5 4" fill="none"></path>
-                <path d="{{ c3LfPts }}" fill="#16150f" opacity="0.4" stroke="none"></path>
-              </svg>
-              <sc-if value="{{ c3LfSHovOn }}" hint-placeholder-val="{{ false }}">
-                <div style="position: absolute; left: {{ c3LfSHx }}; top: {{ c3LfSHy }}; width: 11px; height: 11px; margin: -5px 0 0 -5px; border: 3px solid oklch(0.6 0.19 35); pointer-events: none"></div>
-              </sc-if>
+            <div class="ax" style="--yll: 14px; --yw: 34px">
+              <div class="ax-yl"><span>Fitted</span></div>
+              <div class="ax-yt"><sc-for list="{{ c3LfSYT }}" as="yt" hint-placeholder-count="4"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+              <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c3LfSMove }}" onMouseLeave="{{ c3LfSLeave }}">
+                <svg viewBox="0 0 300 300" style="display: block; width: 100%; height: auto; background: #f2f0eb; border: 2px solid #16150f">
+                  <path d="{{ c3LfSGrid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+                  <path d="{{ c3LfDiag }}" stroke="#8a8577" stroke-width="1.4" stroke-dasharray="5 4" fill="none"></path>
+                  <path d="{{ c3LfPts }}" fill="#16150f" opacity="0.4" stroke="none"></path>
+                </svg>
+                <sc-if value="{{ c3LfSHovOn }}" hint-placeholder-val="{{ false }}">
+                  <div style="position: absolute; left: {{ c3LfSHx }}; top: {{ c3LfSHy }}; width: 11px; height: 11px; margin: -5px 0 0 -5px; border: 3px solid oklch(0.6 0.19 35); pointer-events: none"></div>
+                </sc-if>
+              </div>
+              <div class="ax-xt"><sc-for list="{{ c3LfSXT }}" as="xt" hint-placeholder-count="4"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+              <div class="ax-xl">Actual forward vol</div>
             </div>
             <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; margin-top: 10px; min-height: 30px; line-height: 1.5">{{ c3LfSRead }}</div>
           </div>
@@ -514,18 +581,25 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
         </div>
         <div style="border: 2px solid #16150f; background: #faf9f6; padding: 24px">
           <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px">Why the VIX leads · live</div>
-          <div style="position: relative; cursor: crosshair" onMouseMove="{{ c3vMove }}" onMouseLeave="{{ c3vLeave }}">
-            <svg viewBox="0 0 560 420" style="display: block; width: 100%; height: auto; background: #f2f0eb; border: 2px solid #16150f">
-              <path d="{{ c3vDiag }}" stroke="#8a8577" stroke-width="1.6" stroke-dasharray="5 4" fill="none"></path>
-              <path d="{{ c3vPts }}" fill="#16150f" opacity="0.45" stroke="none"></path>
-              <path d="{{ c3vFit }}" stroke="oklch(0.6 0.19 35)" stroke-width="2.4" fill="none"></path>
-            </svg>
-            <sc-if value="{{ c3vHovOn }}" hint-placeholder-val="{{ false }}">
-              <div style="position: absolute; left: {{ c3vHx }}; top: {{ c3vHy }}; width: 12px; height: 12px; margin: -6px 0 0 -6px; border: 3px solid oklch(0.6 0.19 35); pointer-events: none"></div>
-            </sc-if>
+          <div class="ax" style="--yll: 14px; --yw: 32px">
+            <div class="ax-yl"><span>VIX level</span></div>
+            <div class="ax-yt"><sc-for list="{{ c3vYT }}" as="yt" hint-placeholder-count="5"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+            <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c3vMove }}" onMouseLeave="{{ c3vLeave }}">
+              <svg viewBox="0 0 560 420" style="display: block; width: 100%; height: auto; background: #f2f0eb; border: 2px solid #16150f">
+                <path d="{{ c3vGrid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+                <path d="{{ c3vDiag }}" stroke="#8a8577" stroke-width="1.6" stroke-dasharray="5 4" fill="none"></path>
+                <path d="{{ c3vPts }}" fill="#16150f" opacity="0.45" stroke="none"></path>
+                <path d="{{ c3vFit }}" stroke="oklch(0.6 0.19 35)" stroke-width="2.4" fill="none"></path>
+              </svg>
+              <sc-if value="{{ c3vHovOn }}" hint-placeholder-val="{{ false }}">
+                <div style="position: absolute; left: {{ c3vHx }}; top: {{ c3vHy }}; width: 12px; height: 12px; margin: -6px 0 0 -6px; border: 3px solid oklch(0.6 0.19 35); pointer-events: none"></div>
+              </sc-if>
+            </div>
+            <div class="ax-xt"><sc-for list="{{ c3vXT }}" as="xt" hint-placeholder-count="5"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+            <div class="ax-xl">Trailing 21-day realised vol (annualised %)</div>
           </div>
           <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; margin-top: 12px; min-height: 34px; line-height: 1.5">{{ c3vRead }}</div>
-          <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px">x: trailing 21-day realised vol · y: VIX · one square per trading day · options-implied and recently realised volatility are the same quantity measured two ways</div>
+          <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px">one square per trading day · options-implied and recently realised volatility are the same quantity measured two ways</div>
         </div>
       </div>
       <div style="border: 2px solid #16150f; background: #faf9f6; padding: 24px; margin-bottom: 8px">
@@ -581,30 +655,44 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
             </sc-for>
           </div>
         </div>
-        <div style="position: relative; cursor: crosshair" onMouseMove="{{ c4Move }}" onMouseLeave="{{ c4Leave }}">
-          <svg viewBox="0 0 860 220" preserveAspectRatio="none" style="display: block; width: 100%; height: 220px; background: #f2f0eb; border: 2px solid #16150f">
-            <path d="{{ c4T1 }}" fill="none" stroke="#16150f" stroke-width="1.1" opacity="0.85"></path>
-            <path d="{{ c4T2 }}" fill="none" stroke="oklch(0.6 0.19 35)" stroke-width="1.1" opacity="0.85"></path>
-            <path d="{{ c4T3 }}" fill="none" stroke="#8a8577" stroke-width="1.1" opacity="0.85"></path>
-            <path d="{{ c4T4 }}" fill="none" stroke="oklch(0.55 0.12 150)" stroke-width="1.1" opacity="0.85"></path>
-          </svg>
-          <sc-if value="{{ c4HovOn }}" hint-placeholder-val="{{ false }}">
-            <div style="position: absolute; top: 0; bottom: 0; left: {{ c4CrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
-          </sc-if>
+        <div class="ax" style="--yw: 62px">
+          <div class="ax-yl"><span>{{ c4YL }}</span></div>
+          <div class="ax-yt"><sc-for list="{{ c4YT }}" as="yt" hint-placeholder-count="5"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+          <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c4Move }}" onMouseLeave="{{ c4Leave }}">
+            <svg viewBox="0 0 860 220" preserveAspectRatio="none" style="display: block; width: 100%; height: 220px; background: #f2f0eb; border: 2px solid #16150f">
+              <path d="{{ c4Grid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+              <path d="{{ c4T1 }}" fill="none" stroke="#16150f" stroke-width="1.1" opacity="0.85"></path>
+              <path d="{{ c4T2 }}" fill="none" stroke="oklch(0.6 0.19 35)" stroke-width="1.1" opacity="0.85"></path>
+              <path d="{{ c4T3 }}" fill="none" stroke="#8a8577" stroke-width="1.1" opacity="0.85"></path>
+              <path d="{{ c4T4 }}" fill="none" stroke="oklch(0.55 0.12 150)" stroke-width="1.1" opacity="0.85"></path>
+            </svg>
+            <sc-if value="{{ c4HovOn }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; top: 0; bottom: 0; left: {{ c4CrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
+            </sc-if>
+          </div>
+          <div class="ax-xt"><sc-for list="{{ c4XT }}" as="xt" hint-placeholder-count="6"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+          <div class="ax-xl">Thinned draw</div>
         </div>
-        <div style="display: flex; justify-content: space-between; font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 4px"><span>axis: {{ c4AxLo }} to {{ c4AxHi }}</span><span>{{ c4Read2 }}</span></div>
-        <div style="margin-top: 18px; position: relative">
-          <svg viewBox="0 0 860 130" preserveAspectRatio="none" style="display: block; width: 100%; height: 130px; background: #f2f0eb; border: 2px solid #16150f">
-            <path d="{{ c4Hist }}" fill="#cfccc2" stroke="none"></path>
-          </svg>
-          <div style="position: absolute; top: 0; bottom: 0; left: {{ c4HdiL }}; width: {{ c4HdiW }}; background: oklch(0.6 0.19 35 / 0.22); border-left: 2px solid oklch(0.6 0.19 35); border-right: 2px solid oklch(0.6 0.19 35); pointer-events: none"></div>
-          <div style="position: absolute; top: 0; bottom: 0; left: {{ c4MeanL }}; width: 3px; background: #16150f; pointer-events: none"></div>
-          <sc-if value="{{ c4MleOn }}" hint-placeholder-val="{{ false }}">
-            <div style="position: absolute; top: 0; bottom: 0; left: {{ c4MleL }}; border-left: 3px dashed #55524a; pointer-events: none"></div>
-          </sc-if>
-          <sc-if value="{{ c4RefOn }}" hint-placeholder-val="{{ false }}">
-            <div style="position: absolute; top: 0; bottom: 0; left: {{ c4RefL }}; border-left: 2px dotted oklch(0.55 0.19 30); pointer-events: none"></div>
-          </sc-if>
+        <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 2px; text-align: center">{{ c4Read2 }}</div>
+        <div class="ax" style="margin-top: 14px; --yw: 62px">
+          <div class="ax-yl"><span>Draws</span></div>
+          <div class="ax-yt"></div>
+          <div class="ax-pl">
+            <svg viewBox="0 0 860 130" preserveAspectRatio="none" style="display: block; width: 100%; height: 130px; background: #f2f0eb; border: 2px solid #16150f">
+              <path d="{{ c4hGrid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+              <path d="{{ c4Hist }}" fill="#cfccc2" stroke="none"></path>
+            </svg>
+            <div style="position: absolute; top: 0; bottom: 0; left: {{ c4HdiL }}; width: {{ c4HdiW }}; background: oklch(0.6 0.19 35 / 0.22); border-left: 2px solid oklch(0.6 0.19 35); border-right: 2px solid oklch(0.6 0.19 35); pointer-events: none"></div>
+            <div style="position: absolute; top: 0; bottom: 0; left: {{ c4MeanL }}; width: 3px; background: #16150f; pointer-events: none"></div>
+            <sc-if value="{{ c4MleOn }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; top: 0; bottom: 0; left: {{ c4MleL }}; border-left: 3px dashed #55524a; pointer-events: none"></div>
+            </sc-if>
+            <sc-if value="{{ c4RefOn }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; top: 0; bottom: 0; left: {{ c4RefL }}; border-left: 2px dotted oklch(0.55 0.19 30); pointer-events: none"></div>
+            </sc-if>
+          </div>
+          <div class="ax-xt"><sc-for list="{{ c4hXT }}" as="xt" hint-placeholder-count="7"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+          <div class="ax-xl">{{ c4XL }}</div>
         </div>
         <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 12px; min-height: 20px; line-height: 1.5">{{ c4Read }}</div>
         <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px">marginal posterior below the traces · shaded band: 94% interval · solid rule: posterior mean · dashed: the Week 3 MLE · dotted: the reference value where one exists (ν = 2, β = 0)</div>
@@ -672,7 +760,8 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
             </div>
           </sc-for>
         </div>
-        <div style="display: flex; justify-content: space-between; font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 10px"><span>{{ c5AxLo }}</span><span style="color: oklch(0.6 0.19 35); font-weight: 700">▎{{ c5Obs }}</span><span>{{ c5AxHi }}</span></div>
+        <div class="ax-h" style="margin-top: 6px"><sc-for list="{{ c5Ticks }}" as="ct" hint-placeholder-count="5"><div style="left: {{ ct.p }}">{{ ct.l }}</div></sc-for></div>
+        <div style="font-family: 'Space Grotesk', monospace; font-size: 11px; color: #55524a; text-align: center; margin-top: 2px">{{ c5XL }} · <span style="color: oklch(0.6 0.19 35); font-weight: 700">▎{{ c5Obs }}</span></div>
         <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 14px; padding: 12px 14px; border: 2px solid #16150f; background: #f2f0eb; line-height: 1.6">{{ c5Note }}</div>
         <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 10px">green band: central 95% of replicates · black tick: replicate median · orange rule: the observed 25 years</div>
       </div>
@@ -732,19 +821,25 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
               <button onClick="{{ wb.pick }}" style="font-family: 'Space Grotesk', monospace; font-size: 12px; font-weight: 700; padding: 5px 10px; border: 2px solid #16150f; cursor: pointer; background: {{ wb.bg }}; color: {{ wb.fg }}" style-hover="opacity: 0.8">{{ wb.label }}</button>
             </sc-for>
           </div>
-          <div style="position: relative; cursor: crosshair" onMouseMove="{{ c6wMove }}">
-            <svg viewBox="0 0 860 220" preserveAspectRatio="none" style="display: block; width: 100%; height: 220px; background: #f2f0eb; border: 2px solid #16150f">
-              <path d="{{ c6wBarsInk }}" fill="#16150f" stroke="none"></path>
-              <path d="{{ c6wBarsAcc }}" fill="oklch(0.6 0.19 35)" stroke="none"></path>
-              <path d="{{ c6wWhisk }}" stroke="#8a8577" stroke-width="3" fill="none"></path>
-            </svg>
+          <div class="ax" style="--yll: 14px; --yw: 36px; grid-template-rows: auto auto auto">
+            <div class="ax-yl"><span>{{ c6wYL }}</span></div>
+            <div class="ax-yt"><sc-for list="{{ c6wYT }}" as="yt" hint-placeholder-count="5"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+            <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c6wMove }}">
+              <svg viewBox="0 0 860 220" preserveAspectRatio="none" style="display: block; width: 100%; height: 220px; background: #f2f0eb; border: 2px solid #16150f">
+                <path d="{{ c6wGrid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+                <path d="{{ c6wBarsInk }}" fill="#16150f" stroke="none"></path>
+                <path d="{{ c6wBarsAcc }}" fill="oklch(0.6 0.19 35)" stroke="none"></path>
+                <path d="{{ c6wWhisk }}" stroke="#8a8577" stroke-width="3" fill="none"></path>
+              </svg>
+            </div>
+            <div style="grid-area: 2 / 3; display: flex; font-family: 'Space Grotesk', monospace; font-size: 12px; margin-top: 6px">
+              <sc-for list="{{ c6wDays }}" as="dd" hint-placeholder-count="5">
+                <div onMouseEnter="{{ dd.hover }}" style="flex: 1; text-align: center; cursor: default"><span style="font-weight: 700; color: {{ dd.col }}">{{ dd.name }}</span> {{ dd.lab }}</div>
+              </sc-for>
+            </div>
+            <div class="ax-xl">Day of the trading week</div>
           </div>
-          <div style="display: flex; font-family: 'Space Grotesk', monospace; font-size: 12px; margin-top: 6px">
-            <sc-for list="{{ c6wDays }}" as="dd" hint-placeholder-count="5">
-              <div onMouseEnter="{{ dd.hover }}" style="flex: 1; text-align: center; cursor: default"><span style="font-weight: 700; color: {{ dd.col }}">{{ dd.name }}</span> {{ dd.lab }}</div>
-            </sc-for>
-          </div>
-          <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 12px; min-height: 20px; line-height: 1.5">{{ c6wRead }}</div>
+                    <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 12px; min-height: 20px; line-height: 1.5">{{ c6wRead }}</div>
           <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px">grey whiskers: ± one standard error where the fit provides one</div>
         </div>
         <div style="border: 2px solid #16150f; background: #faf9f6; padding: 24px">
@@ -752,16 +847,23 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
             <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase">Overnight vs intraday · live</div>
             <div style="display: flex; gap: 8px"><sc-for list="{{ c6dScales }}" as="sb" hint-placeholder-count="2"><button onClick="{{ sb.pick }}" style="font-family: 'Space Grotesk', monospace; font-size: 13px; font-weight: 700; padding: 6px 14px; border: 2px solid #16150f; cursor: pointer; background: {{ sb.bg }}; color: {{ sb.fg }}" style-hover="opacity: 0.8">{{ sb.label }}</button></sc-for></div>
           </div>
-          <div style="position: relative; cursor: crosshair" onMouseMove="{{ c6dMove }}" onMouseLeave="{{ c6dLeave }}">
-            <svg viewBox="0 0 860 280" preserveAspectRatio="none" style="display: block; width: 100%; height: 280px; background: #f2f0eb; border: 2px solid #16150f">
-              <path d="{{ c6dHistI }}" fill="#16150f" opacity="0.14" stroke="none"></path>
-              <path d="{{ c6dHistO }}" fill="oklch(0.6 0.19 35)" opacity="0.18" stroke="none"></path>
-              <path d="{{ c6dCurveI }}" fill="none" stroke="#16150f" stroke-width="2.4"></path>
-              <path d="{{ c6dCurveO }}" fill="none" stroke="oklch(0.6 0.19 35)" stroke-width="2.6"></path>
-            </svg>
-            <sc-if value="{{ c6dHovOn }}" hint-placeholder-val="{{ false }}">
-              <div style="position: absolute; top: 0; bottom: 0; left: {{ c6dCrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
-            </sc-if>
+          <div class="ax" style="--yll: 14px; --yw: 36px">
+            <div class="ax-yl"><span>{{ c6dYL }}</span></div>
+            <div class="ax-yt"><sc-for list="{{ c6dYT }}" as="yt" hint-placeholder-count="5"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+            <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c6dMove }}" onMouseLeave="{{ c6dLeave }}">
+              <svg viewBox="0 0 860 280" preserveAspectRatio="none" style="display: block; width: 100%; height: 280px; background: #f2f0eb; border: 2px solid #16150f">
+                <path d="{{ c6dGrid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+                <path d="{{ c6dHistI }}" fill="#16150f" opacity="0.14" stroke="none"></path>
+                <path d="{{ c6dHistO }}" fill="oklch(0.6 0.19 35)" opacity="0.18" stroke="none"></path>
+                <path d="{{ c6dCurveI }}" fill="none" stroke="#16150f" stroke-width="2.4"></path>
+                <path d="{{ c6dCurveO }}" fill="none" stroke="oklch(0.6 0.19 35)" stroke-width="2.6"></path>
+              </svg>
+              <sc-if value="{{ c6dHovOn }}" hint-placeholder-val="{{ false }}">
+                <div style="position: absolute; top: 0; bottom: 0; left: {{ c6dCrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
+              </sc-if>
+            </div>
+            <div class="ax-xt"><sc-for list="{{ c6dXT }}" as="xt" hint-placeholder-count="6"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+            <div class="ax-xl">Session log-return</div>
           </div>
           <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 12px; min-height: 20px; line-height: 1.5">{{ c6dRead }}</div>
           <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px">{{ c6dSub }} · orange: close-to-open · ink: open-to-close</div>
@@ -769,21 +871,28 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
       </div>
       <div style="border: 2px solid #16150f; background: #faf9f6; padding: 24px; margin-bottom: 24px">
         <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px">Realised volatility, week by week · live</div>
-        <div style="position: relative; cursor: crosshair" onMouseMove="{{ c6vMove }}" onMouseLeave="{{ c6vLeave }}">
-          <svg viewBox="0 0 860 240" preserveAspectRatio="none" style="display: block; width: 100%; height: 240px; background: #f2f0eb; border: 2px solid #16150f">
-            <rect x="{{ c6vC1x }}" y="0" width="{{ c6vC1w }}" height="240" fill="#f4b40038"></rect>
-            <rect x="{{ c6vC2x }}" y="0" width="{{ c6vC2w }}" height="240" fill="#e2504e29"></rect>
-            <rect x="{{ c6vC3x }}" y="0" width="{{ c6vC3w }}" height="240" fill="#1f9ec429"></rect>
-            <rect x="{{ c6vC4x }}" y="0" width="{{ c6vC4w }}" height="240" fill="#3fa34d29"></rect>
-            <line x1="0" y1="{{ c6vMedY }}" x2="860" y2="{{ c6vMedY }}" stroke="#8a8577" stroke-width="2" stroke-dasharray="6 4"></line>
-            <path d="{{ c6vLine }}" fill="none" stroke="#16150f" stroke-width="1.4"></path>
-          </svg>
-          <sc-if value="{{ c6vHovOn }}" hint-placeholder-val="{{ false }}">
-            <div style="position: absolute; top: 0; bottom: 0; left: {{ c6vCrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
-          </sc-if>
+        <div class="ax">
+          <div class="ax-yl"><span>Annualised realised vol</span></div>
+          <div class="ax-yt"><sc-for list="{{ c6vYT }}" as="yt" hint-placeholder-count="5"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+          <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c6vMove }}" onMouseLeave="{{ c6vLeave }}">
+            <svg viewBox="0 0 860 240" preserveAspectRatio="none" style="display: block; width: 100%; height: 240px; background: #f2f0eb; border: 2px solid #16150f">
+              <rect x="{{ c6vC1x }}" y="0" width="{{ c6vC1w }}" height="240" fill="#f4b40038"></rect>
+              <rect x="{{ c6vC2x }}" y="0" width="{{ c6vC2w }}" height="240" fill="#e2504e29"></rect>
+              <rect x="{{ c6vC3x }}" y="0" width="{{ c6vC3w }}" height="240" fill="#1f9ec429"></rect>
+              <rect x="{{ c6vC4x }}" y="0" width="{{ c6vC4w }}" height="240" fill="#3fa34d29"></rect>
+              <path d="{{ c6vGrid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+              <line x1="0" y1="{{ c6vMedY }}" x2="860" y2="{{ c6vMedY }}" stroke="#8a8577" stroke-width="2" stroke-dasharray="6 4"></line>
+              <path d="{{ c6vLine }}" fill="none" stroke="#16150f" stroke-width="1.4"></path>
+            </svg>
+            <sc-if value="{{ c6vHovOn }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; top: 0; bottom: 0; left: {{ c6vCrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
+            </sc-if>
+          </div>
+          <div class="ax-xt"><sc-for list="{{ c6vXT }}" as="xt" hint-placeholder-count="6"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+          <div class="ax-xl">Week ending</div>
         </div>
         <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 12px; min-height: 20px; line-height: 1.5">{{ c6vRead }}</div>
-        <div style="display: flex; justify-content: space-between; font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px"><span>2000</span><span>volatility clustering, visible to the naked eye: the failure Week 5 measured</span><span>2024</span></div>
+        <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px; text-align: center">volatility clustering, visible to the naked eye: the failure Week 5 measured</div>
       </div>
       <button onClick="{{ toggleW6 }}" style="width: 100%; text-align: left; font-family: 'Space Grotesk', monospace; font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 16px 20px; border: 2px solid #16150f; background: {{ w6BtnBg }}; color: {{ w6BtnFg }}; cursor: pointer; display: flex; justify-content: space-between" style-hover="background: oklch(0.6 0.19 35); color: #f2f0eb"><span>Explore the Week 6 results · open vs closed market</span><span>{{ w6Chevron }}</span></button>
       <sc-if value="{{ openW6 }}" hint-placeholder-val="{{ false }}">
@@ -819,15 +928,22 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
           <div style="margin-top: 28px; border-top: 2px solid #16150f; padding-top: 24px">
             <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px">Quarterly NIG skew against the VIX · live</div>
             <div style="display: grid; grid-template-columns: 560px 1fr; gap: 28px; align-items: start">
-              <div style="position: relative; cursor: crosshair" onMouseMove="{{ c6sMove }}" onMouseLeave="{{ c6sLeave }}">
-                <svg viewBox="0 0 560 300" style="display: block; width: 100%; height: auto; background: #f2f0eb; border: 2px solid #16150f">
-                  <path d="{{ c6sZero }}" stroke="#8a8577" stroke-width="1.6" stroke-dasharray="5 4" fill="none"></path>
-                  <path d="{{ c6sFit }}" stroke="oklch(0.6 0.19 35)" stroke-width="2.4" fill="none"></path>
-                  <path d="{{ c6sPts }}" fill="#16150f" stroke="none"></path>
-                </svg>
-                <sc-if value="{{ c6sHovOn }}" hint-placeholder-val="{{ false }}">
-                  <div style="position: absolute; left: {{ c6sHx }}; top: {{ c6sHy }}; width: 12px; height: 12px; margin: -6px 0 0 -6px; border: 3px solid oklch(0.6 0.19 35); pointer-events: none"></div>
-                </sc-if>
+              <div class="ax" style="--yll: 14px; --yw: 32px">
+                <div class="ax-yl"><span>Fitted NIG β</span></div>
+                <div class="ax-yt"><sc-for list="{{ c6sYT }}" as="yt" hint-placeholder-count="5"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+                <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c6sMove }}" onMouseLeave="{{ c6sLeave }}">
+                  <svg viewBox="0 0 560 300" style="display: block; width: 100%; height: auto; background: #f2f0eb; border: 2px solid #16150f">
+                    <path d="{{ c6sGrid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+                    <path d="{{ c6sZero }}" stroke="#8a8577" stroke-width="1.6" stroke-dasharray="5 4" fill="none"></path>
+                    <path d="{{ c6sFit }}" stroke="oklch(0.6 0.19 35)" stroke-width="2.4" fill="none"></path>
+                    <path d="{{ c6sPts }}" fill="#16150f" stroke="none"></path>
+                  </svg>
+                  <sc-if value="{{ c6sHovOn }}" hint-placeholder-val="{{ false }}">
+                    <div style="position: absolute; left: {{ c6sHx }}; top: {{ c6sHy }}; width: 12px; height: 12px; margin: -6px 0 0 -6px; border: 3px solid oklch(0.6 0.19 35); pointer-events: none"></div>
+                  </sc-if>
+                </div>
+                <div class="ax-xt"><sc-for list="{{ c6sXT }}" as="xt" hint-placeholder-count="6"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+                <div class="ax-xl">Quarterly average VIX (log spacing)</div>
               </div>
               <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; line-height: 1.6">
                 <div style="min-height: 40px; margin-bottom: 12px">{{ c6sRead }}</div>
@@ -878,8 +994,12 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
             </sc-for>
           </div>
         </div>
-        <div style="position: relative; cursor: crosshair" onMouseMove="{{ c7Move }}" onMouseLeave="{{ c7Leave }}">
+        <div class="ax">
+          <div class="ax-yl"><span>Daily log-return</span></div>
+          <div class="ax-yt"><sc-for list="{{ c7YT }}" as="yt" hint-placeholder-count="6"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+          <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c7Move }}" onMouseLeave="{{ c7Leave }}">
           <svg viewBox="0 0 900 340" preserveAspectRatio="none" style="display: block; width: 100%; height: 340px; background: #f2f0eb; border: 2px solid #16150f">
+            <path d="{{ c7Grid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
             <path d="{{ c7Zero }}" stroke="#cfccc2" stroke-width="1"></path>
             <path d="{{ c7Ret }}" fill="none" stroke="#b5b1a6" stroke-width="0.9"></path>
             <path d="{{ c7L_0 }}" fill="none" stroke="steelblue" stroke-width="1.8"></path>
@@ -894,9 +1014,12 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
           <sc-if value="{{ c7HovOn }}" hint-placeholder-val="{{ false }}">
             <div style="position: absolute; top: 0; bottom: 0; left: {{ c7CrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
           </sc-if>
+          </div>
+          <div class="ax-xt"><sc-for list="{{ c7XT }}" as="xt" hint-placeholder-count="6"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+          <div class="ax-xl">Date</div>
         </div>
         <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 12px; min-height: 20px; line-height: 1.5">{{ c7Read }}</div>
-        <div style="display: flex; justify-content: space-between; font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px"><span>axis: {{ c7AxLo }} to {{ c7AxHi }}</span><span>every forecast made only with data available the evening before</span></div>
+        <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px; text-align: center">every forecast made only with data available the evening before</div>
       </div>
       <button onClick="{{ toggleW7 }}" style="width: 100%; text-align: left; font-family: 'Space Grotesk', monospace; font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 16px 20px; border: 2px solid #16150f; background: {{ w7BtnBg }}; color: {{ w7BtnFg }}; cursor: pointer; display: flex; justify-content: space-between" style-hover="background: oklch(0.6 0.19 35); color: #f2f0eb"><span>Explore the Week 7 results · violations &amp; Basel zones</span><span>{{ w7Chevron }}</span></button>
       <sc-if value="{{ openW7 }}" hint-placeholder-val="{{ false }}">
@@ -943,20 +1066,27 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
           </div>
           <div style="margin-top: 32px; border-top: 2px solid #16150f; padding-top: 28px">
             <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px">The violations, accumulating day by day · live</div>
-            <div style="position: relative; cursor: crosshair" onMouseMove="{{ c7cMove }}" onMouseLeave="{{ c7cLeave }}">
-              <svg viewBox="0 0 860 240" preserveAspectRatio="none" style="display: block; width: 100%; height: 240px; background: #f2f0eb; border: 2px solid #16150f">
-                <path d="{{ c7cExp }}" fill="none" stroke="#16150f" stroke-width="2" stroke-dasharray="7 5"></path>
-                <path d="{{ c7cL_0 }}" fill="none" stroke="steelblue" stroke-width="1.8"></path>
-                <path d="{{ c7cL_1 }}" fill="none" stroke="purple" stroke-width="1.8"></path>
-                <path d="{{ c7cL_2 }}" fill="none" stroke="crimson" stroke-width="1.8"></path>
-                <path d="{{ c7cL_3 }}" fill="none" stroke="darkorange" stroke-width="2.2"></path>
-              </svg>
-              <sc-if value="{{ c7cHovOn }}" hint-placeholder-val="{{ false }}">
-                <div style="position: absolute; top: 0; bottom: 0; left: {{ c7cCrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
-              </sc-if>
+            <div class="ax">
+              <div class="ax-yl"><span>Cumulative violations</span></div>
+              <div class="ax-yt"><sc-for list="{{ c7cYT }}" as="yt" hint-placeholder-count="5"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+              <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c7cMove }}" onMouseLeave="{{ c7cLeave }}">
+                <svg viewBox="0 0 860 240" preserveAspectRatio="none" style="display: block; width: 100%; height: 240px; background: #f2f0eb; border: 2px solid #16150f">
+                  <path d="{{ c7cGrid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+                  <path d="{{ c7cExp }}" fill="none" stroke="#16150f" stroke-width="2" stroke-dasharray="7 5"></path>
+                  <path d="{{ c7cL_0 }}" fill="none" stroke="steelblue" stroke-width="1.8"></path>
+                  <path d="{{ c7cL_1 }}" fill="none" stroke="purple" stroke-width="1.8"></path>
+                  <path d="{{ c7cL_2 }}" fill="none" stroke="crimson" stroke-width="1.8"></path>
+                  <path d="{{ c7cL_3 }}" fill="none" stroke="darkorange" stroke-width="2.2"></path>
+                </svg>
+                <sc-if value="{{ c7cHovOn }}" hint-placeholder-val="{{ false }}">
+                  <div style="position: absolute; top: 0; bottom: 0; left: {{ c7cCrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
+                </sc-if>
+              </div>
+              <div class="ax-xt"><sc-for list="{{ c7cXT }}" as="xt" hint-placeholder-count="6"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+              <div class="ax-xl">Date</div>
             </div>
             <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 12px; min-height: 20px; line-height: 1.5">{{ c7cRead }}</div>
-            <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px">top of axis: {{ c7cAxHi }} · dashed rule: the count a correctly calibrated model should accumulate · steelblue Gaussian, purple Laplace, crimson Student-t, orange NIG · the vertical cliffs are late 2008 and March 2020</div>
+            <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px">dashed rule: the count a correctly calibrated model should accumulate · steelblue Gaussian, purple Laplace, crimson Student-t, orange NIG · the vertical cliffs are late 2008 and March 2020</div>
           </div>
           <div style="margin-top: 32px; border-top: 2px solid #16150f; padding-top: 28px">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px">
@@ -967,16 +1097,23 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
                 </sc-for>
               </div>
             </div>
-            <div style="position: relative; cursor: crosshair" onMouseMove="{{ c7bMove }}" onMouseLeave="{{ c7bLeave }}">
-              <svg viewBox="0 0 860 240" preserveAspectRatio="none" style="display: block; width: 100%; height: 240px; background: #f2f0eb; border: 2px solid #16150f">
-                <rect x="0" y="{{ c7bGy }}" width="860" height="{{ c7bGh }}" fill="oklch(0.55 0.12 150 / 0.15)"></rect>
-                <rect x="0" y="{{ c7bYy }}" width="860" height="{{ c7bYh }}" fill="oklch(0.78 0.13 85 / 0.2)"></rect>
-                <rect x="0" y="6" width="860" height="{{ c7bRh }}" fill="oklch(0.55 0.19 30 / 0.16)"></rect>
-                <path d="{{ c7bLine }}" fill="none" stroke="#16150f" stroke-width="2"></path>
-              </svg>
-              <sc-if value="{{ c7bHovOn }}" hint-placeholder-val="{{ false }}">
-                <div style="position: absolute; top: 0; bottom: 0; left: {{ c7bCrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
-              </sc-if>
+            <div class="ax">
+              <div class="ax-yl"><span>Violations in trailing 250 days</span></div>
+              <div class="ax-yt"><sc-for list="{{ c7bYT }}" as="yt" hint-placeholder-count="6"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+              <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c7bMove }}" onMouseLeave="{{ c7bLeave }}">
+                <svg viewBox="0 0 860 240" preserveAspectRatio="none" style="display: block; width: 100%; height: 240px; background: #f2f0eb; border: 2px solid #16150f">
+                  <rect x="0" y="{{ c7bGy }}" width="860" height="{{ c7bGh }}" fill="oklch(0.55 0.12 150 / 0.15)"></rect>
+                  <rect x="0" y="{{ c7bYy }}" width="860" height="{{ c7bYh }}" fill="oklch(0.78 0.13 85 / 0.2)"></rect>
+                  <rect x="0" y="6" width="860" height="{{ c7bRh }}" fill="oklch(0.55 0.19 30 / 0.16)"></rect>
+                  <path d="{{ c7bGrid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+                  <path d="{{ c7bLine }}" fill="none" stroke="#16150f" stroke-width="2"></path>
+                </svg>
+                <sc-if value="{{ c7bHovOn }}" hint-placeholder-val="{{ false }}">
+                  <div style="position: absolute; top: 0; bottom: 0; left: {{ c7bCrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
+                </sc-if>
+              </div>
+              <div class="ax-xt"><sc-for list="{{ c7bXT }}" as="xt" hint-placeholder-count="6"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+              <div class="ax-xl">Date the 250-day window ends</div>
             </div>
             <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 12px; min-height: 20px; line-height: 1.5">{{ c7bRead }}</div>
             <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px">count of 99% VaR violations in the trailing 250 trading days · green ≤ 4 · yellow 5–9 · red ≥ 10, the model is presumed broken</div>
@@ -995,7 +1132,9 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
                 </div>
               </sc-for>
             </div>
-            <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 14px; padding: 12px 14px; border: 2px solid #16150f; background: #f2f0eb; line-height: 1.6">{{ c7eNote }}</div>
+            <div class="ax-h"><sc-for list="{{ c7eTicks }}" as="et" hint-placeholder-count="6"><div style="left: {{ et.p }}">{{ et.l }}</div></sc-for></div>
+            <div style="font-family: 'Space Grotesk', monospace; font-size: 11px; color: #55524a; text-align: center; margin-top: 2px">Realised loss ÷ forecast ES on breach days</div>
+        <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 14px; padding: 12px 14px; border: 2px solid #16150f; background: #f2f0eb; line-height: 1.6">{{ c7eNote }}</div>
             <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 8px">realised loss over forecast 97.5% ES on breach days · 10,000 bootstrap resamples · black rule at 1: forecasts adequate on average</div>
           </div>
 
@@ -1055,11 +1194,11 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
               </div>
             </div>
           </sc-for>
-          <div style="position: relative; height: 34px; font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a">
-            <div style="position: absolute; left: 0; top: 10px">1 yr</div>
-            <div style="position: absolute; left: {{ sampleMarkW }}; top: 0; border-left: 2px dashed #16150f; padding: 0 0 0 6px; height: 34px"><div style="padding-top: 10px">sample length (25 yr)</div></div>
+          <div style="position: relative; height: 52px; font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a">
+            <sc-for list="{{ w8Ticks }}" as="rt" hint-placeholder-count="6"><div style="position: absolute; left: {{ rt.p }}; top: 4px; transform: translateX(-50%); white-space: nowrap">{{ rt.l }}</div></sc-for>
+            <div style="position: absolute; left: {{ sampleMarkW }}; top: 0; border-left: 2px dashed #16150f; padding: 0 0 0 6px; height: 52px"><div style="padding-top: 26px">sample length (25 yr)</div></div>
             <sc-if value="{{ showUniverse }}" hint-placeholder-val="{{ true }}">
-              <div style="position: absolute; left: {{ universeMarkW }}; top: 0; border-left: 2px dashed oklch(0.6 0.19 35); padding: 0 0 0 6px; height: 34px; color: oklch(0.6 0.19 35)"><div style="padding-top: 10px">age of the universe</div></div>
+              <div style="position: absolute; left: {{ universeMarkW }}; top: 0; border-left: 2px dashed oklch(0.6 0.19 35); padding: 0 0 0 6px; height: 52px; color: oklch(0.6 0.19 35)"><div style="padding-top: 26px">age of the universe</div></div>
             </sc-if>
           </div>
           <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; padding: 14px 16px; border: 2px solid #16150f; background: #f2f0eb; line-height: 1.6">{{ w8Note }}</div>
@@ -1075,21 +1214,28 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
             </sc-for>
           </div>
         </div>
-        <div style="position: relative; cursor: crosshair" onMouseMove="{{ c8Move }}" onMouseLeave="{{ c8Leave }}">
-          <svg viewBox="0 0 860 300" preserveAspectRatio="none" style="display: block; width: 100%; height: 300px; background: #f2f0eb; border: 2px solid #16150f">
-            <path d="{{ c8L_gaussian }}" fill="none" stroke="steelblue" stroke-width="2.2" stroke-dasharray="6 4"></path>
-            <path d="{{ c8L_laplace }}" fill="none" stroke="purple" stroke-width="2.2"></path>
-            <path d="{{ c8L_vg }}" fill="none" stroke="forestgreen" stroke-width="2.2"></path>
-            <path d="{{ c8L_t }}" fill="none" stroke="crimson" stroke-width="2.4"></path>
-            <path d="{{ c8L_nig }}" fill="none" stroke="darkorange" stroke-width="3"></path>
-          </svg>
-          <div style="position: absolute; top: 0; bottom: 0; left: {{ c8ObsL }}; border-left: 3px solid #1f9ec4; pointer-events: none"></div>
-          <sc-if value="{{ c8HovOn }}" hint-placeholder-val="{{ false }}">
-            <div style="position: absolute; top: 0; bottom: 0; left: {{ c8CrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
-          </sc-if>
+        <div class="ax" style="--yw: 32px">
+          <div class="ax-yl"><span>P(worst day ≤ x)</span></div>
+          <div class="ax-yt"><sc-for list="{{ c8YT }}" as="yt" hint-placeholder-count="6"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+          <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c8Move }}" onMouseLeave="{{ c8Leave }}">
+            <svg viewBox="0 0 860 300" preserveAspectRatio="none" style="display: block; width: 100%; height: 300px; background: #f2f0eb; border: 2px solid #16150f">
+              <path d="{{ c8Grid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+              <path d="{{ c8L_gaussian }}" fill="none" stroke="steelblue" stroke-width="2.2" stroke-dasharray="6 4"></path>
+              <path d="{{ c8L_laplace }}" fill="none" stroke="purple" stroke-width="2.2"></path>
+              <path d="{{ c8L_vg }}" fill="none" stroke="forestgreen" stroke-width="2.2"></path>
+              <path d="{{ c8L_t }}" fill="none" stroke="crimson" stroke-width="2.4"></path>
+              <path d="{{ c8L_nig }}" fill="none" stroke="darkorange" stroke-width="3"></path>
+            </svg>
+            <div style="position: absolute; top: 0; bottom: 0; left: {{ c8ObsL }}; border-left: 3px solid #1f9ec4; pointer-events: none"></div>
+            <sc-if value="{{ c8HovOn }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; top: 0; bottom: 0; left: {{ c8CrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
+            </sc-if>
+          </div>
+          <div class="ax-xt"><sc-for list="{{ c8XT }}" as="xt" hint-placeholder-count="7"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+          <div class="ax-xl">Worst single day of a 25-year sample</div>
         </div>
         <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 12px; min-height: 20px; line-height: 1.5">{{ c8Read }}</div>
-        <div style="display: flex; justify-content: space-between; font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px"><span>−32%</span><span>y axis: probability, 0 to 1 · x axis: the worst single day a 25-year sample produces · exact law of the minimum, no simulation noise</span><span>−1%</span></div>
+        <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 6px; text-align: center">exact law of the minimum, no simulation noise</div>
         <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px">
           <sc-for list="{{ c8Cards }}" as="xc" hint-placeholder-count="5">
             <div style="border: 2px solid #16150f; padding: 10px 14px; background: #f2f0eb; font-family: 'Space Grotesk', monospace; font-size: 12px; line-height: 1.5">
@@ -1114,11 +1260,11 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
               </div>
             </div>
           </sc-for>
-          <div style="position: relative; height: 34px; font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a">
-            <div style="position: absolute; left: 0; top: 10px">0.1 yr</div>
-            <div style="position: absolute; left: {{ c8sSampleL }}; top: 0; border-left: 2px dashed #16150f; padding-left: 6px; height: 34px"><div style="padding-top: 10px">sample length (25 yr)</div></div>
+          <div style="position: relative; height: 52px; font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a">
+            <sc-for list="{{ c8sTicks }}" as="rt" hint-placeholder-count="6"><div style="position: absolute; left: {{ rt.p }}; top: 4px; transform: translateX(-50%); white-space: nowrap">{{ rt.l }}</div></sc-for>
+            <div style="position: absolute; left: {{ c8sSampleL }}; top: 0; border-left: 2px dashed #16150f; padding-left: 6px; height: 52px"><div style="padding-top: 26px">sample length (25 yr)</div></div>
             <sc-if value="{{ c8sUnivOn }}" hint-placeholder-val="{{ true }}">
-              <div style="position: absolute; left: {{ c8sUnivL }}; top: 0; border-left: 2px dashed oklch(0.6 0.19 35); padding-left: 6px; height: 34px; color: oklch(0.6 0.19 35)"><div style="padding-top: 10px">age of the universe</div></div>
+              <div style="position: absolute; left: {{ c8sUnivL }}; top: 0; border-left: 2px dashed oklch(0.6 0.19 35); padding-left: 6px; height: 52px; color: oklch(0.6 0.19 35)"><div style="padding-top: 26px">age of the universe</div></div>
             </sc-if>
           </div>
         </div>
@@ -1181,15 +1327,22 @@ details[open] > summary { background: #16150f !important; color: #f2f0eb !import
           <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase">Five days at a time · live</div>
           <div style="display: flex; gap: 8px"><sc-for list="{{ c9Scales }}" as="sb" hint-placeholder-count="2"><button onClick="{{ sb.pick }}" style="font-family: 'Space Grotesk', monospace; font-size: 13px; font-weight: 700; padding: 6px 14px; border: 2px solid #16150f; cursor: pointer; background: {{ sb.bg }}; color: {{ sb.fg }}" style-hover="opacity: 0.8">{{ sb.label }}</button></sc-for></div>
         </div>
-        <div style="position: relative; cursor: crosshair" onMouseMove="{{ c9Move }}" onMouseLeave="{{ c9Leave }}">
-          <svg viewBox="0 0 860 300" preserveAspectRatio="none" style="display: block; width: 100%; height: 300px; background: #f2f0eb; border: 2px solid #16150f">
-            <path d="{{ c9Hist }}" fill="#e2dfd5" stroke="none"></path>
-            <path d="{{ c9Direct }}" fill="none" stroke="#16150f" stroke-width="2.2" stroke-dasharray="6 4"></path>
-            <path d="{{ c9Conv }}" fill="none" stroke="darkorange" stroke-width="3"></path>
-          </svg>
-          <sc-if value="{{ c9HovOn }}" hint-placeholder-val="{{ false }}">
-            <div style="position: absolute; top: 0; bottom: 0; left: {{ c9CrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
-          </sc-if>
+        <div class="ax">
+          <div class="ax-yl"><span>{{ c9YL }}</span></div>
+          <div class="ax-yt"><sc-for list="{{ c9YT }}" as="yt" hint-placeholder-count="6"><div style="top: {{ yt.p }}">{{ yt.l }}</div></sc-for></div>
+          <div class="ax-pl" style="cursor: crosshair" onMouseMove="{{ c9Move }}" onMouseLeave="{{ c9Leave }}">
+            <svg viewBox="0 0 860 300" preserveAspectRatio="none" style="display: block; width: 100%; height: 300px; background: #f2f0eb; border: 2px solid #16150f">
+              <path d="{{ c9Grid }}" fill="none" stroke="#d6d2c6" stroke-width="1"></path>
+              <path d="{{ c9Hist }}" fill="#e2dfd5" stroke="none"></path>
+              <path d="{{ c9Direct }}" fill="none" stroke="#16150f" stroke-width="2.2" stroke-dasharray="6 4"></path>
+              <path d="{{ c9Conv }}" fill="none" stroke="darkorange" stroke-width="3"></path>
+            </svg>
+            <sc-if value="{{ c9HovOn }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; top: 0; bottom: 0; left: {{ c9CrossLeft }}; width: 2px; background: #16150f; pointer-events: none"></div>
+            </sc-if>
+          </div>
+          <div class="ax-xt"><sc-for list="{{ c9XT }}" as="xt" hint-placeholder-count="7"><div style="left: {{ xt.p }}">{{ xt.l }}</div></sc-for></div>
+          <div class="ax-xl">Five-day log-return</div>
         </div>
         <div style="font-family: 'Space Grotesk', monospace; font-size: 13px; margin-top: 12px; min-height: 20px; line-height: 1.5">{{ c9Read }}</div>
         <div style="font-family: 'Space Grotesk', monospace; font-size: 12px; color: #55524a; margin-top: 8px">{{ c9Sub }}</div>
@@ -1363,6 +1516,105 @@ class Component extends DCLogic {
     }
     return d;
   }
+  // ---------- axis helpers ----------
+  // tick locator in the matplotlib idiom: steps of 1, 2, 2.5 or 5 times a power of ten
+  niceTicks(lo, hi, target) {
+    if (!isFinite(lo) || !isFinite(hi) || !(hi > lo)) return { vals: [], step: 1 };
+    const raw = (hi - lo) / (target || 6);
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const n = raw / mag;
+    const step = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * mag;
+    const vals = [];
+    for (let k = Math.ceil(lo / step - 1e-9); k * step <= hi + step * 1e-9; k++) vals.push(k * step);
+    return { vals, step };
+  }
+  // decimal places follow the tick spacing · minus sign U+2212, as everywhere else on the page
+  tickFmt(step, mult, suffix) {
+    const m = mult == null ? 1 : mult, s = Math.abs(step * m) || 1;
+    let d = Math.max(0, -Math.floor(Math.log10(s)));
+    const scaled = s * Math.pow(10, d);
+    if (Math.abs(scaled - Math.round(scaled)) > 1e-9) d++;
+    d = Math.min(d, 6);
+    const suf = suffix == null ? '' : suffix;
+    return v => {
+      const x = v * m, a = Math.abs(x) < s * 1e-6 ? 0 : Math.abs(x);
+      if (a === 0) return '0' + suf;
+      return (x < 0 ? '−' : '') + (d === 0 && a >= 1e4 ? Math.round(a).toLocaleString() : a.toFixed(d)) + suf;
+    };
+  }
+  sup(n) { return String(n).replace(/-/g, '⁻').replace(/[0-9]/g, c => '⁰¹²³⁴⁵⁶⁷⁸⁹'[+c]); }
+  gridPath(xs, ys, W, H) {
+    let d = '';
+    for (const x of xs) d += 'M' + x.toFixed(1) + ',0L' + x.toFixed(1) + ',' + H;
+    for (const y of ys) d += 'M0,' + y.toFixed(1) + 'L' + W + ',' + y.toFixed(1);
+    return d;
+  }
+  // { c: gridline coordinates in viewBox units, t: the HTML tick-label list }
+  ax(lo, hi, s, span, opts) {
+    const o = opts || {};
+    const nt = this.niceTicks(lo, hi, o.n);
+    const f = o.fmt || this.tickFmt(nt.step, o.mult, o.suffix);
+    return { c: nt.vals.map(s), t: nt.vals.map(v => ({ p: (s(v) / span * 100).toFixed(2) + '%', l: f(v) })) };
+  }
+  // decade ticks, for the density charts on a log scale
+  axLog(dLo, dHi, s, span) {
+    const e0 = Math.ceil(Math.log10(dLo) - 1e-9), e1 = Math.floor(Math.log10(dHi) + 1e-9);
+    const step = e1 - e0 > 7 ? 2 : 1, es = [];
+    for (let e = e0; e <= e1; e += step) es.push(e);
+    return {
+      c: es.map(e => s(Math.pow(10, e))),
+      t: es.map(e => ({ p: (s(Math.pow(10, e)) / span * 100).toFixed(2) + '%', l: e === 0 ? '1' : '10' + this.sup(e) })),
+    };
+  }
+  // calendar ticks for the axes indexed by trading day, dateAt(i) returning YYYYMMDD
+  axTime(dateAt, a, b, s, span) {
+    const MO = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const d0 = dateAt(a), d1 = dateAt(b);
+    const y0 = Math.floor(d0 / 10000), y1 = Math.floor(d1 / 10000);
+    const m0 = Math.floor(d0 / 100) % 100, m1 = Math.floor(d1 / 100) % 100;
+    const nMon = (y1 - y0) * 12 + (m1 - m0);
+    const out = { c: [], t: [] };
+    const at = (ym, lab) => {
+      const t0 = ym * 100;
+      let i = a;
+      while (i < b && dateAt(i) < t0) i++;
+      if (dateAt(i) < t0) return;
+      out.c.push(s(i));
+      out.t.push({ p: (s(i) / span * 100).toFixed(2) + '%', l: lab });
+    };
+    if (nMon <= 30) {
+      const step = nMon <= 8 ? 1 : nMon <= 16 ? 2 : 3;
+      let y = y0, m = m0 + 1;
+      if (m > 12) { m -= 12; y++; }
+      while ((y - y0) * 12 + (m - m0) <= nMon) {
+        at(y * 100 + m, m === 1 ? "Jan '" + String(y).slice(2) : MO[m]);
+        m += step;
+        while (m > 12) { m -= 12; y++; }
+      }
+    } else {
+      const yrs = y1 - y0;
+      const step = yrs <= 8 ? 1 : yrs <= 16 ? 2 : yrs <= 40 ? 5 : 10;
+      for (let y = Math.ceil(y0 / step) * step; y <= y1; y += step) at(y * 100 + 1, String(y));
+    }
+    return out;
+  }
+  // decade ticks in return-period years, for the log-scaled HTML bar tracks
+  axRP(lo, hi) {
+    const out = [];
+    // these ranges run to 10^34 years, so thin the decades to about eight labels
+    const e0 = Math.ceil(lo), e1 = Math.floor(hi);
+    const step = Math.max(1, Math.ceil((e1 - e0) / 8));
+    for (let e = e0; e <= e1; e += step) {
+      const p = (e - lo) / (hi - lo) * 100;
+      if (p < -0.5 || p > 100.5) continue;
+      out.push({
+        p: p.toFixed(2) + '%',
+        l: (e < 0 ? Math.pow(10, e).toFixed(-e) : e <= 4 ? Math.pow(10, e).toLocaleString() : '10' + this.sup(e)) + ' yr',
+      });
+    }
+    return out;
+  }
+
   sel(on) { const C = this.C; return { bg: on ? C.ink : 'transparent', fg: on ? C.paper : C.ink }; }
   chip(on, color) { const C = this.C; return { bg: on ? color : 'transparent', fg: on ? C.paper : C.ink, bd: color }; }
   btn(open) { const C = this.C; return { bg: open ? C.ink : 'transparent', fg: open ? C.paper : C.ink, ch: open ? '−' : '+' }; }
@@ -1404,6 +1656,18 @@ class Component extends DCLogic {
       return this.histPath(h.lo, h.w, h.c, B.D.n, sx, syd, H);
     });
   }
+  // shared axes for the two full-sample density panels (Week 2 and Week 3)
+  densAxes(scale, prefix) {
+    const { W, H, sx, syd } = this.densGeom(scale), g = this.B().D.grid;
+    const x = this.ax(g.lo, g.hi, sx, W, { n: 7, mult: 100, suffix: '%' });
+    const y = scale === 'log' ? this.axLog(1e-4, 100, syd, H) : this.ax(0, 70, syd, H, { n: 6 });
+    const o = {};
+    o[prefix + 'Grid'] = this.gridPath(x.c, y.c, W, H);
+    o[prefix + 'XT'] = x.t;
+    o[prefix + 'YT'] = y.t;
+    o[prefix + 'YL'] = scale === 'log' ? 'Density (log scale)' : 'Density';
+    return o;
+  }
   densReadout(xv, keys) {
     const B = this.B();
     let s = 'Daily return ' + this.fmtP(xv, 1);
@@ -1423,6 +1687,7 @@ class Component extends DCLogic {
       c2Scales: [['linear', 'Linear'], ['log', 'Log scale']].map(([k, label]) => ({
         label, ...this.sel(S.c2scale === k), pick: () => this.setState({ c2scale: k }),
       })),
+      ...this.densAxes(S.c2scale, 'c2'),
       c2Hist: this.densHist(S.c2scale),
       c2Gauss: this.densCurve('gaussian', S.c2scale),
       c2T: this.densCurve('t', S.c2scale),
@@ -1454,6 +1719,11 @@ class Component extends DCLogic {
     const S = this.state, gq = this.qqGeom(model), q = this.B().D.qq;
     const hi = S[hovKey];
     const out = {};
+    const axX = this.ax(gq.lo, gq.hi, gq.sx, gq.W, { n: 5, mult: 100, suffix: '%' });
+    const axY = this.ax(gq.lo, gq.hi, gq.sy, gq.W, { n: 5, mult: 100, suffix: '%' });
+    out[prefix + 'Grid'] = this.gridPath(axX.c, axY.c, gq.W, gq.W);
+    out[prefix + 'XT'] = axX.t;
+    out[prefix + 'YT'] = axY.t;
     out[prefix + 'Pts'] = gq.pts;
     out[prefix + 'Col'] = this.MCOL(model);
     out[prefix + 'Diag'] = gq.diag;
@@ -1505,6 +1775,7 @@ class Component extends DCLogic {
       c3Scales: [['linear', 'Linear'], ['log', 'Log scale']].map(([k, label]) => ({
         label, ...this.sel(S.c3scale === k), pick: () => this.setState({ c3scale: k }),
       })),
+      ...this.densAxes(S.c3scale, 'c3'),
       c3Hist: this.densHist(S.c3scale),
       c3Move: e => { const r = e.currentTarget.getBoundingClientRect(); this.setState({ c3x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) }); },
       c3Leave: () => this.setState({ c3x: null }),
@@ -1580,10 +1851,13 @@ class Component extends DCLogic {
     const hi = S.c3yi;
     const crises = [[2000.17, 2002.83], [2007.75, 2009.25], [2020.08, 2020.5], [2022, 2024]];
     const cr = crises.map(([a, b]) => ({ x: sx(a).toFixed(1), w: (sx(b) - sx(a)).toFixed(1) }));
+    const axX = this.ax(Y.y[0], Y.y[Y.y.length - 1], sx, W, { n: 6, fmt: v => String(Math.round(v)) });
+    const axY = this.ax(vLo, vHi, sy, H, { n: 5 });
     return {
       c3yBtns: [['tnu', 'Student-t ν̂'], ['na', 'NIG α'], ['nb', 'NIG β'], ['vgnu', 'VG ν']].map(([k, label]) => ({
         label, ...this.sel(S.c3ym === k), pick: () => this.setState({ c3ym: k, c3yi: null }),
       })),
+      c3yGrid: this.gridPath(axX.c, axY.c, W, H), c3yXT: axX.t, c3yYT: axY.t, c3yYL: d.label,
       c3yLine: this.path(xs, ys), c3yPts: pts, c3yWhisk: whisk,
       c3yRef: d.ref == null ? '' : 'M24,' + sy(d.ref).toFixed(1) + 'L' + (W - 12) + ',' + sy(d.ref).toFixed(1),
       c3yC1x: cr[0].x, c3yC1w: cr[0].w, c3yC2x: cr[1].x, c3yC2w: cr[1].w,
@@ -1632,6 +1906,7 @@ class Component extends DCLogic {
     const hr = F[Math.min(S.c3fI, F.length - 1)];
     return {
       c3fRows: rows, c3fZeroL: px(0).toFixed(2) + '%',
+      c3fTicks: this.ax(lo, hi, px, 100, { n: 6 }).t,
       c3fNote: hr[0] + ': standardised coefficient ' + (hr[1] > 0 ? '+' : '−') + Math.abs(hr[1]).toFixed(3) + ' (HAC SE ' + hr[2].toFixed(3) + ', p ' + (hr[3].startsWith('<') ? hr[3] : '= ' + hr[3]) + '). In words: ' + hr[4] + '.',
     };
   }
@@ -1686,10 +1961,13 @@ class Component extends DCLogic {
       const b = sxy / sxx, a = my - b * mx;
       const fit = 'M' + sx(0).toFixed(1) + ',' + sy(a).toFixed(1) + 'L' + sx(hi * 0.96).toFixed(1) + ',' + sy(a + b * hi * 0.96).toFixed(1);
       const diag = 'M' + sx(0).toFixed(1) + ',' + sy(0).toFixed(1) + 'L' + sx(hi).toFixed(1) + ',' + sy(hi).toFixed(1);
-      return { W, H, hi, pts, px, py, fit, diag, slope: b };
+      return { W, H, hi, pts, px, py, fit, diag, slope: b, sx, sy };
     });
     const hi2 = S.c3vx;
+    const axX = this.ax(0, geo.hi, geo.sx, geo.W, { n: 5 });
+    const axY = this.ax(0, geo.hi, geo.sy, geo.H, { n: 5 });
     return {
+      c3vGrid: this.gridPath(axX.c, axY.c, geo.W, geo.H), c3vXT: axX.t, c3vYT: axY.t,
       c3vPts: geo.pts, c3vFit: geo.fit, c3vDiag: geo.diag,
       c3vMove: e => {
         const rc = e.currentTarget.getBoundingClientRect();
@@ -1754,7 +2032,7 @@ class Component extends DCLogic {
         spts += 'M' + (x - 1.2).toFixed(1) + ',' + (y - 1.2).toFixed(1) + 'h2.4v2.4h-2.4Z';
       }
       return {
-        a, f, W, H, SW, cr, px, py,
+        a, f, W, H, SW, cr, px, py, sx, sy, ssx, ssy, ymax,
         pA: this.path(a.map((v, i) => sx(i)), a.map(v => sy(v))),
         pF: this.path(f.map((v, i) => sx(i)), f.map(v => sy(v))),
         spts, sdiag: 'M' + ssx(0) + ',' + ssy(0) + 'L' + ssx(ymax) + ',' + ssy(ymax),
@@ -1762,7 +2040,13 @@ class Component extends DCLogic {
     });
     const hi = S.c3lx == null ? null : Math.round(S.c3lx * (n - 1));
     const si = S.c3ls;
+    const axX = this.axTime(i => lf.d[i], 0, n - 1, geo.sx, geo.W);
+    const axY = this.ax(0, geo.ymax, geo.sy, geo.H, { n: 5, suffix: '%' });
+    const axSX = this.ax(0, geo.ymax, geo.ssx, geo.SW, { n: 4, suffix: '%' });
+    const axSY = this.ax(0, geo.ymax, geo.ssy, geo.SW, { n: 4, suffix: '%' });
     return {
+      c3LfGrid: this.gridPath(axX.c, axY.c, geo.W, geo.H), c3LfXT: axX.t, c3LfYT: axY.t,
+      c3LfSGrid: this.gridPath(axSX.c, axSY.c, geo.SW, geo.SW), c3LfSXT: axSX.t, c3LfSYT: axSY.t,
       c3LfA: geo.pA, c3LfF: geo.pF,
       c3LfC1x: geo.cr[0].x, c3LfC1w: geo.cr[0].w, c3LfC2x: geo.cr[1].x, c3LfC2w: geo.cr[1].w,
       c3LfC3x: geo.cr[2].x, c3LfC3w: geo.cr[2].w, c3LfC4x: geo.cr[3].x, c3LfC4w: geo.cr[3].w,
@@ -1824,7 +2108,7 @@ class Component extends DCLogic {
         const y = HH - 6 - (cnt[i] / cmax) * (HH - 16);
         hp += 'M' + x0.toFixed(1) + ',' + (HH - 6) + 'L' + x0.toFixed(1) + ',' + y.toFixed(1) + 'L' + x1.toFixed(1) + ',' + y.toFixed(1) + 'L' + x1.toFixed(1) + ',' + (HH - 6) + 'Z';
       }
-      return { chains, lo, hi, W, H, paths, hp, hsx, HW, HH };
+      return { chains, lo, hi, W, H, paths, hp, hsx, HW, HH, sx, sy };
     });
     const fmtv = v => {
       const a = Math.abs(v);
@@ -1833,6 +2117,9 @@ class Component extends DCLogic {
     const mle = this.mleOf(model, p);
     const ref = (model === 't' && p === 'nu') ? 2 : (model === 'nig' && p === 'beta') ? 0 : null;
     const hx = S.c4x;
+    const axX = this.ax(0, geo.chains[0].length - 1, geo.sx, geo.W, { n: 6, fmt: v => String(Math.round(v)) });
+    const axY = this.ax(geo.lo, geo.hi, geo.sy, geo.H, { n: 5 });
+    const axH = this.ax(geo.lo, geo.hi, geo.hsx, geo.HW, { n: 7 });
     let read2;
     if (hx == null) read2 = '250 thinned draws per chain shown of 1,000 kept per chain · hover for the draw-by-draw values';
     else {
@@ -1846,6 +2133,8 @@ class Component extends DCLogic {
       c4Params: params.map(pp => ({
         label: this.PLAB(pp), ...this.sel(p === pp), pick: () => this.setState({ c4p: pp, c4x: null }),
       })),
+      c4Grid: this.gridPath(axX.c, axY.c, geo.W, geo.H), c4XT: axX.t, c4YT: axY.t, c4YL: this.PLAB(p),
+      c4hGrid: this.gridPath(axH.c, [], geo.HW, geo.HH), c4hXT: axH.t, c4XL: this.MNAME[model] + ' · ' + this.PLAB(p),
       c4T1: geo.paths[0] || '', c4T2: geo.paths[1] || '', c4T3: geo.paths[2] || '', c4T4: geo.paths[3] || '',
       c4Move: e => { const r = e.currentTarget.getBoundingClientRect(); this.setState({ c4x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) }); },
       c4Leave: () => this.setState({ c4x: null }),
@@ -1860,7 +2149,6 @@ class Component extends DCLogic {
       c4RefL: ref == null ? '0%' : ((geo.hsx(ref) / geo.HW) * 100).toFixed(2) + '%',
       c4Read: this.MNAME[model] + ' · ' + this.PLAB(p) + ' · posterior mean ' + fmtv(sum.mean) + ' · 94% interval (' + fmtv(sum.lo) + ', ' + fmtv(sum.hi) + ')' + (mle != null ? ' · MLE ' + fmtv(mle) : ''),
       c4Read2: read2,
-      c4AxLo: fmtv(geo.lo), c4AxHi: fmtv(geo.hi),
     };
   }
 
@@ -1898,10 +2186,11 @@ class Component extends DCLogic {
     return {
       c5Btns: stats.map(s => ({ label: LBL[s] || s, ...this.sel(st === s), pick: () => this.setState({ c5s: s }) })),
       c5Rows: rows,
+      c5Ticks: this.ax(lo, hi, px, 100, isPct ? { n: 5, mult: 100, suffix: '%' } : { n: 5 }).t,
+      c5XL: LBL[st] || st,
       c5Obs: 'observed ' + fmtv(hr.obs),
       c5Note: NM[hr.m] + ' · ' + (LBL[st] || st) + ': observed ' + fmtv(hr.obs) + ' against a replicate band of (' + fmtv(hr.lo) + ', ' + fmtv(hr.hi) + '), median ' + fmtv(hr.med) + '. ' +
         (inside ? 'Inside the band: this model can produce histories that look like ours on this statistic.' : 'Outside the band: 1,000 replicate histories never reach the observed value.'),
-      c5AxLo: fmtv(lo), c5AxHi: fmtv(hi),
     };
   }
 
@@ -1932,7 +2221,9 @@ class Component extends DCLogic {
       }
     });
     const hi = S.c6wi, r = wd[hi];
+    const axY = this.ax(vmin, vmax, sy, H, { n: 5 });
     return {
+      c6wGrid: this.gridPath([], axY.c, W, H), c6wYT: axY.t, c6wYL: d.label,
       c6wBtns: ['nu', 'sig', 'mean', 'kurt'].map(k => ({
         label: defs[k].label, ...this.sel(S.c6wm === k), pick: () => this.setState({ c6wm: k }),
       })),
@@ -1967,7 +2258,7 @@ class Component extends DCLogic {
         ? (d0 => { const l = Math.max(Math.log10(Math.max(d0, 1e-9)), -3.2); return H - 8 - (l + 3.2) / (Math.log10(ymax) + 3.2) * (H - 20); })
         : (d0 => H - 8 - Math.min(d0 / ymax, 1) * (H - 20));
       return {
-        W, H, sx,
+        W, H, sx, syd, ymax,
         histO: this.histPath(lo, h.w, h.over, comp.n, sx, syd, H),
         histI: this.histPath(lo, h.w, h.intra, comp.n, sx, syd, H),
         curveO: this.path(gx.map(sx), po.map(syd)),
@@ -1985,10 +2276,16 @@ class Component extends DCLogic {
       read = 'Return ' + this.fmtP(hx, 1) + ' · overnight density ' + dO.toFixed(2) + ' vs intraday ' + dI.toFixed(2) +
         (Math.abs(hx) > 0.015 ? ' · the ' + (ratio > 1 ? 'closed' : 'open') + ' market is ' + (ratio > 1 ? ratio : 1 / ratio).toFixed(1) + '× likelier to print this' : '');
     }
+    const axX = this.ax(lo, hi, geo.sx, geo.W, { n: 6, mult: 100, suffix: '%' });
+    const axY = S.c6dscale === 'log'
+      ? this.axLog(Math.pow(10, -3.2), geo.ymax, geo.syd, geo.H)
+      : this.ax(0, geo.ymax, geo.syd, geo.H, { n: 5 });
     return {
       c6dScales: [['linear', 'Linear'], ['log', 'Log scale']].map(([k, label]) => ({
         label, ...this.sel(S.c6dscale === k), pick: () => this.setState({ c6dscale: k }),
       })),
+      c6dGrid: this.gridPath(axX.c, axY.c, geo.W, geo.H), c6dXT: axX.t, c6dYT: axY.t,
+      c6dYL: S.c6dscale === 'log' ? 'Density (log scale)' : 'Density',
       c6dHistO: geo.histO, c6dHistI: geo.histI, c6dCurveO: geo.curveO, c6dCurveI: geo.curveI,
       c6dMove: e => { const r = e.currentTarget.getBoundingClientRect(); this.setState({ c6dx: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) }); },
       c6dLeave: () => this.setState({ c6dx: null }),
@@ -2008,10 +2305,13 @@ class Component extends DCLogic {
       const idxOf = ymd => { let i = 0; while (i < n - 1 && wv.d[i] < ymd) i++; return i; };
       const crises = [[20000301, 20021031], [20071001, 20090331], [20200201, 20200630], [20220101, 20231231]];
       const cr = crises.map(([a, b]) => ({ x: sx(idxOf(a)).toFixed(1), w: (sx(idxOf(b)) - sx(idxOf(a))).toFixed(1) }));
-      return { W, H, vmax, sy, cr, med, line: this.path(vals.map((v, i) => sx(i)), vals.map(v => sy(v))), medY: sy(med).toFixed(1) };
+      return { W, H, vmax, sx, sy, cr, med, line: this.path(vals.map((v, i) => sx(i)), vals.map(v => sy(v))), medY: sy(med).toFixed(1) };
     });
     const hi = S.c6vx == null ? null : Math.round(S.c6vx * (n - 1));
+    const axX = this.axTime(i => wv.d[i], 0, n - 1, geo.sx, geo.W);
+    const axY = this.ax(0, geo.vmax, geo.sy, geo.H, { n: 5, suffix: '%' });
     return {
+      c6vGrid: this.gridPath(axX.c, axY.c, geo.W, geo.H), c6vXT: axX.t, c6vYT: axY.t,
       c6vLine: geo.line, c6vMedY: geo.medY,
       c6vC1x: geo.cr[0].x, c6vC1w: geo.cr[0].w, c6vC2x: geo.cr[1].x, c6vC2w: geo.cr[1].w,
       c6vC3x: geo.cr[2].x, c6vC3w: geo.cr[2].w, c6vC4x: geo.cr[3].x, c6vC4w: geo.cr[3].w,
@@ -2049,7 +2349,15 @@ class Component extends DCLogic {
       return { W, H, pts, px, py, fit, r, zeroY, sx, sy, lx, xlo, xhi, ylo, yhi };
     });
     const hi = S.c6si;
+    // the x axis is log-spaced in the VIX, so the ticks are round VIX levels, not round logs
+    const vixT = [10, 12, 15, 20, 25, 30, 40, 50, 60, 80].filter(v => Math.log(v) >= geo.xlo && Math.log(v) <= geo.xhi);
+    const axX = {
+      c: vixT.map(v => geo.sx(Math.log(v))),
+      t: vixT.map(v => ({ p: (geo.sx(Math.log(v)) / geo.W * 100).toFixed(2) + '%', l: String(v) })),
+    };
+    const axY = this.ax(geo.ylo, geo.yhi, geo.sy, geo.H, { n: 5 });
     return {
+      c6sGrid: this.gridPath(axX.c, axY.c, geo.W, geo.H), c6sXT: axX.t, c6sYT: axY.t,
       c6sPts: geo.pts, c6sFit: geo.fit,
       c6sZero: geo.zeroY == null ? '' : 'M10,' + geo.zeroY + 'L' + (geo.W - 10) + ',' + geo.zeroY,
       c6sMove: e => {
@@ -2121,7 +2429,10 @@ class Component extends DCLogic {
       }
       return { sx, sy, yLo, yHi, retPath: this.path(rx, ry), lines, marks, zeroY: sy(0).toFixed(1) };
     });
+    const axX = this.axTime(i => B.D.dates[w7.start + i], a, b, geo.sx, W);
+    const axY = this.ax(geo.yLo, geo.yHi, geo.sy, H, { n: 6, mult: 100, suffix: '%' });
     const out = {
+      c7Grid: this.gridPath(axX.c, axY.c, W, H), c7XT: axX.t, c7YT: axY.t,
       c7Zooms: [['full', 'Full 2002–24'], ['gfc', 'GFC 2008–09'], ['covid', 'COVID 2020'], ['fed', 'Fed 2022']].map(([k, label]) => ({
         label, ...this.sel(S.c7zoom === k), pick: () => this.setState({ c7zoom: k, c7x: null }),
       })),
@@ -2134,7 +2445,6 @@ class Component extends DCLogic {
       c7Move: e => { const r = e.currentTarget.getBoundingClientRect(); this.setState({ c7x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) }); },
       c7Leave: () => this.setState({ c7x: null }),
       c7HovOn: S.c7x != null, c7CrossLeft: S.c7x == null ? '0%' : (S.c7x * 100).toFixed(2) + '%',
-      c7AxLo: this.fmtP(geo.yLo, 1), c7AxHi: this.fmtP(geo.yHi, 1),
     };
     this.W7M.forEach((m, i) => {
       const on = !!(S.c7mask & (1 << i));
@@ -2175,12 +2485,14 @@ class Component extends DCLogic {
       const exp = 'M' + sx(0) + ',' + sy(0) + 'L' + sx(w7.n - 1) + ',' + sy(alpha * w7.n).toFixed(1);
       return { sx, sy, yMax, paths, exp };
     });
+    const axX = this.axTime(i => B.D.dates[w7.start + i], 0, w7.n - 1, geo.sx, W);
+    const axY = this.ax(0, geo.yMax, geo.sy, H, { n: 5, fmt: v => String(Math.round(v)) });
     const out = {
+      c7cGrid: this.gridPath(axX.c, axY.c, W, H), c7cXT: axX.t, c7cYT: axY.t,
       c7cExp: geo.exp,
       c7cMove: e => { const r = e.currentTarget.getBoundingClientRect(); this.setState({ c7cx: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) }); },
       c7cLeave: () => this.setState({ c7cx: null }),
       c7cHovOn: S.c7cx != null, c7cCrossLeft: S.c7cx == null ? '0%' : (S.c7cx * 100).toFixed(2) + '%',
-      c7cAxHi: Math.round(geo.yMax) + ' hits',
     };
     this.W7M.forEach((m, i) => { out['c7cL_' + i] = geo.paths[m]; });
     if (S.c7cx == null) {
@@ -2216,12 +2528,15 @@ class Component extends DCLogic {
       const sx = this.sc(0, w7.n - 1, 0, W), sy = this.sc(0, yMax, H - 6, 6);
       const xs = [], ys = [];
       for (let i = 249; i < w7.n; i += 4) { xs.push(sx(i)); ys.push(sy(counts[i])); }
-      return { counts, worst, yMax, sy, line: this.path(xs, ys), y45: sy(4.5).toFixed(1), y95: sy(9.5).toFixed(1) };
+      return { counts, worst, yMax, sx, sy, line: this.path(xs, ys), y45: sy(4.5).toFixed(1), y95: sy(9.5).toFixed(1) };
     });
     const bz = w7.basel.find(r => r.m === m);
     const hi = S.c7bx == null ? null : Math.max(249, Math.round(S.c7bx * (w7.n - 1)));
     const zone = c => c <= 4 ? 'green' : c <= 9 ? 'yellow' : 'red';
+    const axX = this.axTime(i => B.D.dates[w7.start + i], 249, w7.n - 1, geo.sx, W);
+    const axY = this.ax(0, geo.yMax, geo.sy, H, { n: 6, fmt: v => String(Math.round(v)) });
     return {
+      c7bGrid: this.gridPath(axX.c, axY.c, W, H), c7bXT: axX.t, c7bYT: axY.t,
       c7bBtns: this.W7M.map(mm => ({ label: mm, ...this.sel(m === mm), pick: () => this.setState({ c7bm: mm, c7bx: null }) })),
       c7bLine: geo.line,
       c7bGy: geo.y45, c7bGh: (H - 6 - geo.y45).toFixed(1),
@@ -2251,6 +2566,7 @@ class Component extends DCLogic {
     const covers = r.lo <= 1 && r.hi >= 1;
     return {
       c7eRows: rows, c7eOneL: px(1).toFixed(2) + '%',
+      c7eTicks: this.ax(lo, hi, px, 100, { n: 6 }).t,
       c7eNote: r.m + ': on its ' + r.n + ' breach days the realised loss averaged ' + r.ratio.toFixed(2) + '× the forecast ES · bootstrap 95% interval [' + r.lo.toFixed(2) + ', ' + r.hi.toFixed(2) + '] ' +
         (covers ? 'straddles 1: adequate on average.' : (r.ratio > 1 ? 'sits above 1: the model still understates tail losses when breached.' : 'sits below 1.')),
     };
@@ -2262,7 +2578,10 @@ class Component extends DCLogic {
     const W = 860, H = 300;
     const xlo = w8.x[0], xhi = w8.x[w8.x.length - 1];
     const sx = this.sc(xlo, xhi, 0, W), sy = this.sc(0, 1, H - 8, 8);
+    const axX = this.ax(xlo, xhi, sx, W, { n: 7, mult: 100, suffix: '%' });
+    const axY = this.ax(0, 1, sy, H, { n: 5 });
     const out = {
+      c8Grid: this.gridPath(axX.c, axY.c, W, H), c8XT: axX.t, c8YT: axY.t,
       c8Chips: this.MK.map((k, i) => {
         const on = !!(S.c8mask & (1 << i));
         const ch = this.chip(on, this.MCOL(k));
@@ -2343,6 +2662,7 @@ class Component extends DCLogic {
       ' · mean log-score ' + o.mean_logscore.toFixed(2) + ' · ' + o['n_days_p<0.001'] + ' of ' + o.n_crisis_days + ' crisis days below p = 0.001';
     return {
       c8sRows: rows,
+      c8sTicks: this.axRP(geo.lo, geo.hi),
       c8sSampleL: px(25).toFixed(2) + '%',
       c8sUnivOn: geo.hi > 10.5, c8sUnivL: px(1.38e10).toFixed(2) + '%',
       c8sNote: note,
@@ -2364,7 +2684,7 @@ class Component extends DCLogic {
       const gx = [];
       for (let i = 0; i < g.npts; i++) gx.push(g.lo + i / (g.npts - 1) * (g.hi - g.lo));
       return {
-        sx,
+        sx, syd, ymax,
         hist: this.histPath(cv.hist.lo, cv.hist.w, cv.hist.c, cv.n, sx, syd, H),
         conv: this.path(gx.map(sx), pc.map(syd)),
         direct: this.path(gx.map(sx), pd.map(syd)),
@@ -2381,10 +2701,16 @@ class Component extends DCLogic {
       read = '5-day return ' + this.fmtP(hx, 1) + ' · convolved density ' + dc.toFixed(2) + ' vs direct ' + dd.toFixed(2) +
         (Math.abs(hx) > 0.04 ? ' · the convolved law puts ' + (dd > dc ? (dd / dc).toFixed(1) + '× too little' : (dc / dd).toFixed(1) + '× too much' ) + ' weight here' : '');
     }
+    const axX = this.ax(g.lo, g.hi, geo.sx, W, { n: 7, mult: 100, suffix: '%' });
+    const axY = S.c9scale === 'log'
+      ? this.axLog(Math.pow(10, -2.6), geo.ymax, geo.syd, H)
+      : this.ax(0, geo.ymax, geo.syd, H, { n: 5 });
     return {
       c9Scales: [['linear', 'Linear'], ['log', 'Log scale']].map(([k, label]) => ({
         label, ...this.sel(S.c9scale === k), pick: () => this.setState({ c9scale: k }),
       })),
+      c9Grid: this.gridPath(axX.c, axY.c, W, H), c9XT: axX.t, c9YT: axY.t,
+      c9YL: S.c9scale === 'log' ? 'Density (log scale)' : 'Density',
       c9Hist: geo.hist, c9Conv: geo.conv, c9Direct: geo.direct,
       c9Move: e => { const r = e.currentTarget.getBoundingClientRect(); this.setState({ c9x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) }); },
       c9Leave: () => this.setState({ c9x: null }),
@@ -2591,7 +2917,7 @@ class Component extends DCLogic {
       w6Stats, w6Bars, w6Note: w6d.note, w6Days, w6DayNote: w6DayData[S.w6day][2],
       toggleW7: () => this.setState(s => ({ openW7: !s.openW7 })), openW7: S.openW7, w7BtnBg: w7b.bg, w7BtnFg: w7b.fg, w7Chevron: w7b.ch,
       levels, violBars, expectedHits: exp, w7Note, baselBars, baselNote,
-      crises, fits, rpBars, w8Note,
+      crises, fits, rpBars, w8Note, w8Ticks: this.axRP(lo2, hi2),
       crisisDay: c.day, crisisRet: c.ret, crisisEmp: c.emp,
       sampleMarkW: pos2(25).toFixed(1) + '%',
       showUniverse: hi2 > 11,
